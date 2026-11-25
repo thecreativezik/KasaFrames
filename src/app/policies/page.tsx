@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageIntro } from "@/components/layout/page-intro";
 import { Button } from "@/components/ui/button";
 import { collections, INSTALLATION_GHS, products } from "@/lib/data/catalog";
 import { BRAND_PHONE_DISPLAY, formatGhs, whatsappLink } from "@/lib/utils";
@@ -26,28 +27,21 @@ const sections = [
 
 export default function PoliciesPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Service terms</p>
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-          How we work, in plain terms.
-        </h1>
-        <p className="mt-5 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          What you pay, when you pay it, how long it takes, and what happens to the photographs you send us. No
-          surprises at the door.
-        </p>
-      </header>
+    <div className="shell pb-24 pt-16 lg:pb-36 lg:pt-24">
+      <PageIntro title="How we work, in plain terms.">
+        What you pay, when you pay it, how long it takes, and what happens to the photographs you send us. No
+        surprises at the door.
+      </PageIntro>
 
-      <div className="mt-12 grid gap-12 lg:grid-cols-12">
-        <nav className="lg:col-span-3">
-          <div className="sticky top-24 rounded-[2rem] border border-kasa-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-kasa-gold">On this page</p>
-            <ul className="mt-4 grid gap-2 text-sm">
+      <div className="mt-16 grid gap-12 lg:mt-24 lg:grid-cols-12 lg:gap-10">
+        <nav aria-label="On this page" className="lg:col-span-3">
+          <div className="lg:sticky lg:top-28">
+            <ul className="grid border-t border-bone/10 text-[15px]">
               {sections.map((s) => (
-                <li key={s.id}>
+                <li key={s.id} className="border-b border-bone/10">
                   <a
                     href={`#${s.id}`}
-                    className="inline-block py-1.5 text-kasa-muted underline-offset-4 transition hover:text-kasa-black hover:underline dark:text-kasa-sand/80 dark:hover:text-kasa-cream sm:py-0.5"
+                    className="flex min-h-11 items-center py-2 text-bone/60 transition-colors hover:text-bone"
                   >
                     {s.label}
                   </a>
@@ -57,14 +51,14 @@ export default function PoliciesPage() {
           </div>
         </nav>
 
-        <div className="lg:col-span-9">
-          <div className="grid gap-10">
+        <div className="lg:col-span-8 lg:col-start-5">
+          <div className="grid gap-16">
             <Section id="services" title="Three ways to order">
               <p>
                 Every project starts with a free consultation over WhatsApp, phone, or video call. From there you can
                 take any of three routes:
               </p>
-              <dl className="mt-5 grid gap-4">
+              <dl className="mt-6 grid gap-7">
                 <Term term="Full service — site visit, supply and installation">
                   We visit your space, help you choose the frame type, size and content, coordinate production,
                   deliver, and install. You pay the frame price plus {formatGhs(INSTALLATION_GHS)} installation per
@@ -86,20 +80,23 @@ export default function PoliciesPage() {
                 Prices are per frame, in Ghana Cedis, quoted by size in inches. They are published in full on each
                 frame type&rsquo;s page — nothing is quoted on request and nothing is marked up at checkout.
               </p>
-              <ul className="mt-4 grid gap-2">
+              <ul className="mt-5 grid border-t border-bone/10">
                 {collections.map((collection) => {
                   const product = products.find((p) => p.collection === collection.slug);
                   if (!product) return null;
                   const from = Math.min(...product.sizes.map((s) => s.frameGhs));
                   return (
-                    <li key={collection.slug} className="flex items-baseline justify-between gap-4">
+                    <li
+                      key={collection.slug}
+                      className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-bone/10 py-3"
+                    >
                       <Link
                         href={`/collections/${collection.slug}`}
-                        className="underline-offset-4 hover:underline"
+                        className="text-bone underline-offset-4 hover:underline"
                       >
                         {collection.title}
                       </Link>
-                      <span className="text-sm text-kasa-muted dark:text-kasa-sand/70">
+                      <span className="text-[14px] tabular-nums text-bone/50">
                         from {formatGhs(from)} per frame
                       </span>
                     </li>
@@ -174,7 +171,7 @@ export default function PoliciesPage() {
                 can go back on a shelf. What follows is the line we hold in both directions.
               </p>
 
-              <dl className="mt-5 grid gap-4">
+              <dl className="mt-6 grid gap-7">
                 <Term term="If we got it wrong — we remake it, free">
                   Wrong size, wrong finish, the wrong image, a crooked mount, a scratch, a bad print, damage in
                   transit: tell us and we remake the piece at our cost. If you would rather not wait for a remake, we
@@ -258,13 +255,13 @@ export default function PoliciesPage() {
               </p>
             </Section>
 
-            <div className="rounded-[2rem] border border-kasa-black/10 bg-kasa-black p-8 text-kasa-cream dark:border-white/10">
-              <h2 className="font-display text-2xl font-semibold">Something here unclear?</h2>
-              <p className="mt-3 max-w-xl text-sm text-kasa-sand/80">
+            <div className="rounded-panel border border-bone/10 bg-ink-raised p-8 sm:p-10">
+              <h2 className="text-display-sm text-balance">Something here unclear?</h2>
+              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-bone/60">
                 Ask before you commit, not after. We would rather answer a question twice than have you guess.
               </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button asChild variant="secondary">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg">
                   <a
                     href={whatsappLink("Hello KasaFrames — I have a question about how you work.")}
                     target="_blank"
@@ -274,13 +271,13 @@ export default function PoliciesPage() {
                     Ask on WhatsApp
                   </a>
                 </Button>
-                <Button asChild variant="outline" className="border-white/20 text-kasa-cream hover:bg-white/10">
+                <Button asChild size="lg" variant="secondary">
                   <Link href="/book">Book a consultation</Link>
                 </Button>
               </div>
             </div>
 
-            <p className="text-xs text-kasa-muted dark:text-kasa-sand/60">
+            <p className="text-[13px] text-bone/50">
               Kasa Frames · Accra, Ghana · {BRAND_PHONE_DISPLAY}
             </p>
           </div>
@@ -292,18 +289,20 @@ export default function PoliciesPage() {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
-      <h2 className="font-display text-2xl font-semibold">{title}</h2>
-      <div className="mt-4 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{children}</div>
+    <section id={id} className="scroll-mt-28 border-t border-bone/10 pt-8">
+      <h2 className="text-display-sm">{title}</h2>
+      <div className="mt-6 max-w-[68ch] text-[16px] leading-relaxed text-bone/60 text-pretty [&_strong]:font-medium [&_strong]:text-bone">
+        {children}
+      </div>
     </section>
   );
 }
 
 function Term({ term, children }: { term: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-kasa-black/10 bg-white/60 p-5 dark:border-white/10 dark:bg-white/5">
-      <dt className="font-medium text-kasa-black dark:text-kasa-cream">{term}</dt>
-      <dd className="mt-2 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{children}</dd>
+    <div className="border-l border-bone/15 pl-5">
+      <dt className="text-[17px] tracking-[-0.02em] text-bone">{term}</dt>
+      <dd className="mt-2 text-[15px] leading-relaxed text-bone/60">{children}</dd>
     </div>
   );
 }

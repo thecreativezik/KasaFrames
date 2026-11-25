@@ -31,7 +31,7 @@ export const finishFamilies: FinishFamilyMeta[] = [
     label: "Acrylic Gloss",
     tagline: "Mirror-finish panels",
     description:
-      "High-gloss acrylic face-mount. Deep blacks, wet-look sheen, no visible frame—our signature panel.",
+      "High-gloss acrylic face-mount. Deep blacks, wet-look sheen, no visible frame. Our signature panel.",
   },
   {
     key: "framed-matte",
@@ -59,7 +59,7 @@ export const finishFamilies: FinishFamilyMeta[] = [
     label: "Gallery Walls",
     tagline: "Composed multi-piece sets",
     description:
-      "Several pieces composed as one wall—grids, salon clusters, corridors. Spacing and sightlines planned first.",
+      "Several pieces composed as one wall: grids, salon clusters, corridors. Spacing and sightlines planned first.",
   },
   {
     key: "staircase",

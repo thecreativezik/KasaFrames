@@ -2,28 +2,42 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Crop,
+  ImagePlus,
+  Info,
+  RectangleHorizontal,
+  RectangleVertical,
+  RotateCcw,
+  RotateCw,
+  Ruler,
+  Scan,
+  ScanLine,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { WallStage } from "@/components/visualizer/wall-stage";
-import { getProduct, type ProductId } from "@/lib/data/catalog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { FrameView, WallStage } from "@/components/visualizer/wall-stage";
+import { getProduct, INSTALLATION_GHS, type ProductId } from "@/lib/data/catalog";
 import {
   aspectFromQuad,
   detectWallQuad,
   fittedQuad,
   imageToPlane,
+  planeToImage,
   wallWidthFromReference,
   type Point,
   type Quad,
 } from "@/lib/perspective";
-import { formatGhs } from "@/lib/utils";
+import { cn, formatGhs } from "@/lib/utils";
 import {
   CM_PER_INCH,
   costOf,
@@ -40,19 +54,18 @@ import {
   type FrameStyle,
   type Piece,
 } from "@/lib/visualizer";
-import {
-  Copy,
-  Crop,
-  Eye,
-  ImagePlus,
-  LayoutGrid,
-  RotateCcw,
-  RotateCw,
-  Ruler,
-  Scan,
-  Trash2,
-  Upload,
-} from "lucide-react";
+
+/** The three faces of the inspector: choosing frames, editing one, setting up the wall. */
+type Panel = "frames" | "piece" | "wall";
+
+type Preset = "single" | "triptych" | "grid" | "stair";
+
+const PRESETS: { key: Preset; label: string }[] = [
+  { key: "single", label: "Single" },
+  { key: "triptych", label: "Triptych" },
+  { key: "grid", label: "2 × 3 grid" },
+  { key: "stair", label: "Staircase" },
+];
 
 interface SampleRoom {
   id: string;
@@ -159,6 +172,7 @@ export function WallVisualizer() {
   const [sizeLabel, setSizeLabel] = React.useState("");
   const [installation, setInstallation] = React.useState(true);
   const [notice, setNotice] = React.useState<string | null>(null);
+  const [panel, setPanel] = React.useState<Panel>("frames");
 
   const stageRef = React.useRef<HTMLDivElement>(null);
   const imgRef = React.useRef<HTMLImageElement>(null);
@@ -167,6 +181,11 @@ export function WallVisualizer() {
   const measureRef = React.useRef<"a" | "b" | null>(null);
   const artRef = React.useRef<{ id: string; x: number; y: number; artX: number; artY: number } | null>(null);
   const pendingDetect = React.useRef(false);
+
+  // Letting go of a piece puts the inspector back on choosing frames.
+  React.useEffect(() => {
+    if (!selectedId) setPanel((p) => (p === "piece" ? "frames" : p));
+  }, [selectedId]);
 
   const product = getProduct(STYLE_PRODUCT[style]);
   const selected = pieces.find((p) => p.id === selectedId) ?? null;
@@ -274,6 +293,12 @@ export function WallVisualizer() {
     setMeasuring(true);
     setAdjustingWall(false);
     setAdjustingArt(false);
+    setPanel("wall");
+  }
+
+  function cancelMeasuring() {
+    setMeasuring(false);
+    setMeasure(null);
   }
 
   /** Turns the measured line into the wall's width, which sets every size. */
@@ -339,7 +364,7 @@ export function WallVisualizer() {
     setSelectedId(piece.id);
   }
 
-  function applyPreset(preset: "single" | "triptych" | "grid" | "stair") {
+  function applyPreset(preset: Preset) {
     const base = basePiece();
     const size = currentSize();
     if (!base || !size) return;
@@ -443,6 +468,7 @@ export function WallVisualizer() {
     if (!piece || !at) return;
 
     setSelectedId(id);
+    setPanel("piece");
 
     // While the photo is being framed, a drag inside the piece moves the photo
     // rather than the frame—the frame is where the customer wants it by then.
@@ -573,6 +599,12 @@ export function WallVisualizer() {
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (!selected) return;
+
+    if (event.key === "Escape") {
+      setSelectedId(null);
+      event.preventDefault();
+      return;
+    }
     const step = event.shiftKey ? 2 : 0.4;
 
     if (event.key === "Delete" || event.key === "Backspace") {
@@ -618,671 +650,972 @@ export function WallVisualizer() {
     router.push("/visualizer/preview");
   }
 
+  const sizes = product?.sizes ?? [];
+  const tallest = Math.max(1, ...sizes.map((s) => Math.max(s.widthIn, s.heightIn)));
+  const chosen = currentSize();
+  const styleLabel = STYLES.find((s) => s.key === style)?.label ?? "";
+  const isSample = SAMPLE_ROOMS.some((r) => r.src === roomSrc);
+  const reference = SCALE_REFERENCES.find((r) => r.key === referenceKey);
+
+  // A tag that follows the selected piece, just under its bottom edge.
+  const selectedTag = (() => {
+    if (!selected || adjustingArt) return null;
+    const { wCm, hCm } = pieceCm(selected);
+    const hPct = (hCm / wallHeightCm) * 100;
+    const at = planeToImage(quad, { x: selected.xPct / 100, y: (selected.yPct + hPct / 2) / 100 });
+    if (!Number.isFinite(at.x) || !Number.isFinite(at.y)) return null;
+    return (
+      <div
+        className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-full border border-bone/10 bg-ink/85 px-3 py-1.5 text-[12px] tabular-nums text-bone shadow-card backdrop-blur-md"
+        style={{ left: `${clamp(at.x, 0.12, 0.88) * 100}%`, top: `calc(${clamp(at.y, 0, 0.9) * 100}% + 12px)` }}
+      >
+        {Math.round(wCm)} × {Math.round(hCm)} cm
+        <span className="text-bone/50"> · </span>
+        {Math.round(hangHeightCm(selected.yPct, wallHeightCm))} cm up
+      </div>
+    );
+  })();
+
+  const tabs: { key: Panel; label: string; disabled?: boolean }[] = [
+    { key: "frames", label: "Frames" },
+    { key: "piece", label: "Piece", disabled: !selected },
+    { key: "wall", label: "Wall" },
+  ];
+
   return (
-    // Block layout on a phone so the wall can stay stuck to the top while the
-    // controls scroll underneath it; a grid item could only stick inside its own
-    // row, which is the whole problem on a narrow screen.
-    <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-      {/* Direct child of the layout container so it can stay put while the
-          controls beneath it scroll. Nested one level deeper, it could only
-          stick within its own short column. */}
-      <div className="sticky top-14 z-20 -mx-4 bg-kasa-cream px-4 pb-3 pt-2 dark:bg-kasa-black sm:top-16 lg:static lg:col-span-8 lg:col-start-1 lg:row-start-1 lg:mx-0 lg:bg-transparent lg:p-0 dark:lg:bg-transparent">
-        <WallStage
-          roomSrc={roomSrc}
-          wallCm={wallCm}
-          wallHeightCm={wallHeightCm}
-          quad={quad}
-          pieces={pieces}
-          selectedId={selectedId}
-          onPointerDownPiece={onPointerDownPiece}
-          onCornerPointerDown={onCornerPointerDown}
-          showCorners={adjustingWall}
-          showRule={showRule}
-          eyeLevelPct={eyeLevelPct}
-          measure={measure}
-          onMeasurePointerDown={onMeasurePointerDown}
-          stageRef={stageRef}
-          imgRef={imgRef}
-          interactive
-          tabIndex={0}
-          onKeyDown={onKeyDown}
-          onWheel={onWheel}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onClick={(e) => {
-            if (e.target === e.currentTarget || e.target === imgRef.current) setSelectedId(null);
-          }}
-          className="relative w-full touch-none overflow-hidden rounded-[2rem] border border-kasa-black/10 bg-kasa-sand/20 outline-none focus-visible:ring-2 focus-visible:ring-kasa-gold dark:border-white/10"
-        />
-
-      </div>
-
-      {/* Notes and the cost breakdown sit below the controls on a phone, and
-          back under the wall on a wide screen. */}
-      <div className="lg:col-span-8 lg:col-start-1 lg:row-start-2">
-        {/* The photo may already be decoded before the handler is attached. */}
-        <ImageReadyProbe imgRef={imgRef} onReady={() => detect(true)} pending={pendingDetect} />
-
-        {wallNote ? (
-          <p className="mt-4 rounded-2xl border border-kasa-gold/30 bg-kasa-gold/10 px-4 py-3 text-xs leading-relaxed">
-            {wallNote}
-          </p>
-        ) : null}
-
-        {pieces.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-kasa-black/90 p-4 text-center text-xs text-kasa-cream">
-            Choose a finish and size, then press <span className="font-semibold">Add to wall</span>—or start from a
-            layout. Drag to move, arrow keys to nudge, <span className="font-semibold">[</span> and{" "}
-            <span className="font-semibold">]</span> to tilt.
-          </p>
-        ) : null}
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-kasa-muted dark:text-kasa-sand/70">
-          <span className="inline-flex items-center gap-1.5">
-            <Ruler className="h-3.5 w-3.5" />
-            {wallCm} × {wallHeightCm} cm wall, drawn in your photo&rsquo;s perspective
-          </span>
-          {selected ? (
-            (() => {
-              const { wCm, hCm } = pieceCm(selected);
-              return (
-                <span>
-                  Selected: {Math.round(wCm)} × {Math.round(hCm)} cm, centre{" "}
-                  {Math.round(hangHeightCm(selected.yPct, wallHeightCm))} cm off the floor
-                  {Math.round(selected.rotation) !== 0 ? ` · ${Math.round(selected.rotation)}°` : ""}
-                </span>
-              );
-            })()
-          ) : (
-            <span>Tap a frame to select it</span>
-          )}
-        </div>
-
-        {pieces.length > 0 ? (
-          <div className="mt-6 overflow-x-auto rounded-[2rem] border border-kasa-black/10 dark:border-white/10">
-            <table className="w-full min-w-[34rem] text-left text-sm">
-              <thead className="bg-kasa-black/5 text-xs uppercase tracking-wider text-kasa-muted dark:bg-white/5">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Piece</th>
-                  <th className="px-4 py-3 font-semibold">Size</th>
-                  <th className="px-4 py-3 text-right font-semibold">Frame</th>
-                  <th className="px-4 py-3 text-right font-semibold">Install</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cost.lines.map((line) => (
-                  <tr key={line.piece.id} className="border-t border-kasa-black/5 dark:border-white/5">
-                    <td className="px-4 py-3">{line.name}</td>
-                    <td className="px-4 py-3 text-kasa-muted">{line.piece.sizeLabel} in</td>
-                    <td className="px-4 py-3 text-right">{formatGhs(line.frameGhs)}</td>
-                    <td className="px-4 py-3 text-right text-kasa-muted">
-                      {line.installGhs > 0 ? formatGhs(line.installGhs) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">{formatGhs(line.totalGhs)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-8 lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:row-span-2 lg:mt-0">
-        <div className="rounded-[2rem] border border-kasa-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Your room</p>
-
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {SAMPLE_ROOMS.map((sample) => (
+    <div>
+      {/* The studio. On a phone it is one column with the wall stuck under the
+          header; from lg the inspector sits to the right of the wall. The wall
+          is a direct child here so it can stay put while everything below it
+          scrolls. */}
+      <div className="rounded-[28px] border border-bone/10 bg-ink-raised lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_1fr_auto] xl:grid-cols-[minmax(0,1fr)_396px]">
+        <h2 className="sr-only">The wall studio</h2>
+        {/* Rooms */}
+        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-bone/10 px-3 py-3 sm:px-4 lg:col-start-1 lg:row-start-1">
+          {SAMPLE_ROOMS.map((sample) => {
+            const on = roomSrc === sample.src;
+            return (
               <button
                 key={sample.id}
                 type="button"
+                aria-pressed={on}
                 onClick={() => loadRoom(sample.src, sample)}
-                className={`overflow-hidden rounded-xl border transition ${
-                  roomSrc === sample.src
-                    ? "border-kasa-gold ring-2 ring-kasa-gold/30"
-                    : "border-kasa-black/10 hover:border-kasa-gold/50 dark:border-white/10"
-                }`}
+                className={cn(
+                  "flex h-11 shrink-0 items-center gap-2.5 rounded-full border py-1 pl-1 pr-4 text-[13px] transition-[border-color,background-color,color,transform] duration-200 active:scale-[0.97]",
+                  on
+                    ? "border-bone/50 bg-bone/[0.07] text-bone"
+                    : "border-bone/10 text-bone/60 hover:border-bone/30 hover:text-bone",
+                )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={sample.src} alt={sample.label} className="h-14 w-full object-cover" />
+                <img src={sample.src} alt="" className="h-9 w-9 rounded-full object-cover" />
+                {sample.label}
+              </button>
+            );
+          })}
+          <label
+            className={cn(
+              "relative flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-dashed px-4 py-2 text-[13px] transition-[border-color,color] duration-200 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-bone",
+              isSample ? "border-bone/25 text-bone/70 hover:border-bone/50 hover:text-bone" : "border-bone/50 text-bone",
+            )}
+          >
+            {isSample ? <Upload className="h-4 w-4" /> : <Check className="h-4 w-4 text-kasa-gold" />}
+            {isSample ? "Use a photo of your wall" : "Your wall"}
+            <input type="file" accept="image/*" className="sr-only" onChange={(e) => onRoomFile(e.target.files?.[0])} />
+          </label>
+        </div>
+
+        {/* The wall */}
+        <div className="sticky top-[72px] z-20 bg-ink-raised lg:static lg:col-start-1 lg:row-start-2">
+          <div className="relative">
+            <WallStage
+              roomSrc={roomSrc}
+              wallCm={wallCm}
+              wallHeightCm={wallHeightCm}
+              quad={quad}
+              pieces={pieces}
+              selectedId={selectedId}
+              onPointerDownPiece={onPointerDownPiece}
+              onCornerPointerDown={onCornerPointerDown}
+              showCorners={adjustingWall}
+              showRule={showRule}
+              eyeLevelPct={eyeLevelPct}
+              measure={measure}
+              onMeasurePointerDown={onMeasurePointerDown}
+              stageRef={stageRef}
+              imgRef={imgRef}
+              interactive
+              tabIndex={0}
+              aria-label="Your wall. Select a frame, then use the arrow keys to move it."
+              onKeyDown={onKeyDown}
+              onWheel={onWheel}
+              onPointerMove={onPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              onClick={(e) => {
+                if (e.target === e.currentTarget || e.target === imgRef.current) setSelectedId(null);
+              }}
+              imageClassName="max-h-[40vh] rounded-[14px] sm:max-h-[52vh] lg:max-h-[min(68vh,720px)]"
+              overlay={selectedTag}
+              className="relative flex w-full touch-none items-center justify-center overflow-hidden bg-[radial-gradient(70%_60%_at_50%_45%,rgba(244,242,237,0.06),transparent_72%)] px-3 pb-3 pt-16 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bone/60 sm:px-6 sm:pb-6 lg:h-[min(76vh,800px)] lg:px-10 lg:pb-10 lg:pt-20"
+            />
+
+            {/* Floating controls over the stage. */}
+            <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 sm:inset-x-5 sm:top-4">
+              <button
+                type="button"
+                onClick={() => setPanel("wall")}
+                className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-bone/10 bg-ink/85 px-4 py-2 text-[13px] tabular-nums text-bone shadow-card backdrop-blur-md transition-[border-color,transform] duration-200 hover:border-bone/30 active:scale-[0.97]"
+              >
+                <span
+                  aria-hidden
+                  className={cn("h-1.5 w-1.5 rounded-full", calibrated ? "bg-emerald-400" : "bg-kasa-gold")}
+                />
+                {wallCm} × {wallHeightCm} cm
+                <span className="text-bone/65">{calibrated ? "Measured" : "Estimated"}</span>
+              </button>
+
+              <div className="pointer-events-auto flex gap-1 rounded-full border border-bone/10 bg-ink/85 p-1 shadow-card backdrop-blur-md">
+                <StageToggle
+                  pressed={showRule}
+                  onClick={() => setShowRule((v) => !v)}
+                  label="Show a 1 metre rule and the 145 cm hanging line"
+                >
+                  <Ruler className="h-4 w-4" />
+                </StageToggle>
+                <StageToggle
+                  pressed={adjustingWall}
+                  onClick={() => {
+                    setAdjustingWall((v) => !v);
+                    setPanel("wall");
+                  }}
+                  label="Adjust the corners of the wall"
+                >
+                  <Scan className="h-4 w-4" />
+                </StageToggle>
+              </div>
+            </div>
+
+            {/* First visit: the wall is ready and waiting. */}
+            {pieces.length === 0 && !measuring && !adjustingWall ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 sm:p-6 lg:inset-y-0 lg:items-center">
+                <div className="pointer-events-auto w-full max-w-sm rounded-[20px] border border-bone/10 bg-ink/90 p-4 text-center shadow-lift backdrop-blur-md sm:p-6">
+                  <p className="text-[17px] tracking-[-0.02em] text-bone sm:text-title">Your wall is ready.</p>
+                  <p className="mt-1.5 hidden text-[14px] leading-relaxed text-bone/60 sm:block">
+                    Hang a {chosen?.label} in {styleLabel.toLowerCase()}, or start from a layout and move things
+                    around.
+                  </p>
+                  <div className="mt-4 flex justify-center gap-2">
+                    <Button onClick={addPiece}>
+                      <ImagePlus />
+                      Hang a piece
+                    </Button>
+                    <Button variant="secondary" onClick={() => applyPreset("triptych")}>
+                      Try a triptych
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Measuring: the instruction sits on the photo, where the dots are. */}
+            {measuring ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 sm:p-5">
+                <div className="pointer-events-auto flex w-full max-w-xl flex-col gap-3 rounded-[20px] border border-emerald-400/30 bg-ink/85 p-4 shadow-lift backdrop-blur-md sm:flex-row sm:items-center">
+                  <p className="flex-1 text-[14px] leading-relaxed text-bone/80">
+                    Drag <span className="text-emerald-300">A</span> and <span className="text-emerald-300">B</span> to
+                    each end of the {reference?.label.toLowerCase() ?? "thing you know"}, {referenceCm} cm long.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" onClick={cancelMeasuring}>
+                      Cancel
+                    </Button>
+                    <Button onClick={finishMeasuring}>Use this scale</Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* What the wall reader found, and anything that went wrong. */}
+            {!measuring && (wallNote || notice) ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 sm:p-5">
+                <div
+                  role={notice ? "alert" : "status"}
+                  className={cn(
+                    "pointer-events-auto flex w-full max-w-xl items-start gap-3 rounded-[16px] border bg-ink/85 py-2 pl-4 pr-1 text-[13px] leading-relaxed shadow-lift backdrop-blur-md",
+                    notice ? "border-red-400/30 text-red-200" : "border-bone/10 text-bone/80",
+                  )}
+                >
+                  <Info aria-hidden className={cn("mt-2.5 h-4 w-4 shrink-0", notice ? "text-red-300" : "text-kasa-gold")} />
+                  <span className="flex-1 py-2">{notice ?? wallNote}</span>
+                  <button
+                    type="button"
+                    aria-label="Dismiss"
+                    onClick={() => {
+                      setNotice(null);
+                      setWallNote(null);
+                    }}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-bone/60 transition-colors hover:bg-bone/10 hover:text-bone"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Status line */}
+        <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-bone/10 px-4 py-3 text-[13px] text-bone/50 sm:px-5 lg:col-start-1 lg:row-start-3">
+          <p className="tabular-nums">
+            {selected
+              ? (() => {
+                  const { wCm, hCm } = pieceCm(selected);
+                  return `${getProduct(selected.productId)?.name ?? "Piece"} · ${Math.round(wCm)} × ${Math.round(hCm)} cm · centre ${Math.round(hangHeightCm(selected.yPct, wallHeightCm))} cm off the floor${Math.round(selected.rotation) !== 0 ? ` · ${Math.round(selected.rotation)}°` : ""}`;
+                })()
+              : pieces.length > 0
+                ? `${pieces.length} ${pieces.length === 1 ? "piece" : "pieces"} on a ${wallCm} cm wall. Tap one to edit it.`
+                : `A ${wallCm} × ${wallHeightCm} cm wall, drawn in your photo's perspective.`}
+          </p>
+          <p className="hidden items-center gap-1.5 xl:flex">
+            Drag to move <Kbd>←</Kbd>
+            <Kbd>→</Kbd> nudge <Kbd>[</Kbd>
+            <Kbd>]</Kbd> tilt <Kbd>Del</Kbd> remove
+          </p>
+        </div>
+
+        {/* The inspector */}
+        <aside
+          aria-label="Visualizer controls"
+          className="border-t border-bone/10 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:flex lg:flex-col lg:border-l lg:border-t-0 lg:[contain:size]"
+        >
+          <div role="tablist" aria-label="Controls" className="flex gap-1 border-b border-bone/10 p-3">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                id={`viz-tab-${t.key}`}
+                type="button"
+                role="tab"
+                aria-selected={panel === t.key}
+                aria-controls="viz-panel"
+                disabled={t.disabled}
+                onClick={() => setPanel(t.key)}
+                className={cn(
+                  "relative h-11 flex-1 rounded-full text-[14px] transition-[background-color,color] duration-200 disabled:cursor-not-allowed disabled:text-bone/25",
+                  panel === t.key ? "bg-bone text-ink" : "text-bone/60 hover:bg-bone/[0.05] hover:text-bone",
+                )}
+              >
+                {t.label}
+                {t.key === "wall" && !calibrated && panel !== "wall" ? (
+                  <span aria-hidden className="absolute right-4 top-3 h-1.5 w-1.5 rounded-full bg-kasa-gold" />
+                ) : null}
               </button>
             ))}
           </div>
 
-          <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-kasa-black/20 px-4 py-3 text-sm font-medium transition hover:border-kasa-gold hover:text-kasa-gold dark:border-white/20">
-            <Upload className="h-4 w-4" />
-            Upload a photo of your wall
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => onRoomFile(e.target.files?.[0])} />
-          </label>
+          <div
+            id="viz-panel"
+            role="tabpanel"
+            aria-labelledby={`viz-tab-${panel}`}
+            className="[scrollbar-width:thin] lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+          >
+            {panel === "frames" ? (
+              <div className="p-5 sm:p-6">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h3 className="text-[15px] text-bone">Finish</h3>
+                  <p className="truncate text-[13px] text-bone/50">{styleLabel}</p>
+                </div>
+                <div role="radiogroup" aria-label="Finish" className="mt-3 grid grid-cols-5 gap-2">
+                  {STYLES.map((s) => {
+                    const on = style === s.key;
+                    return (
+                      <button
+                        key={s.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={s.label}
+                        title={s.label}
+                        onClick={() => setStyle(s.key)}
+                        className={cn(
+                          "relative h-[4.5rem] overflow-hidden rounded-[12px] border transition-[border-color,background-color,transform] duration-200 active:scale-[0.96]",
+                          on
+                            ? "border-bone/70 bg-[#d9d4cb]"
+                            : "border-bone/10 bg-[#c9c3b8]/80 hover:border-bone/40",
+                        )}
+                      >
+                        <FrameView piece={swatchPiece(s.key)} pxPerCm={1.2} selected={false} interactive={false} />
+                      </button>
+                    );
+                  })}
+                </div>
 
-          <div className="mt-6 h-px bg-kasa-black/10 dark:bg-white/10" />
+                <div className="mt-8 flex items-baseline justify-between gap-4">
+                  <h3 className="text-[15px] text-bone">Size</h3>
+                  {chosen ? (
+                    <p className="text-[13px] tabular-nums text-bone/50">
+                      {Math.round(chosen.widthIn * CM_PER_INCH)} × {Math.round(chosen.heightIn * CM_PER_INCH)} cm ·{" "}
+                      {Math.round(((chosen.widthIn * CM_PER_INCH) / wallCm) * 100)}% of the wall
+                    </p>
+                  ) : null}
+                </div>
+                {/* A shelf of sizes, each drawn to scale against the largest. */}
+                <div role="radiogroup" aria-label="Size in inches" className="mt-3 grid grid-cols-3 gap-2">
+                  {sizes.map((s) => {
+                    const on = s.label === sizeLabel;
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={`${s.label} inches, ${formatGhs(s.frameGhs)}`}
+                        onClick={() => setSizeLabel(s.label)}
+                        className={cn(
+                          "flex h-[6.25rem] flex-col items-center justify-end gap-1 rounded-[12px] border px-1 pb-2.5 transition-[border-color,background-color,transform] duration-200 active:scale-[0.96]",
+                          on ? "border-bone/70 bg-bone/[0.07]" : "border-bone/10 hover:border-bone/35",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn("mb-1.5 block rounded-[1px] border", on ? "border-bone bg-bone/25" : "border-bone/40 bg-bone/10")}
+                          style={{ width: (s.widthIn / tallest) * 40, height: (s.heightIn / tallest) * 40 }}
+                        />
+                        <span className="text-[13px] tabular-nums text-bone">{s.label}</span>
+                        <span className="text-[12px] tabular-nums text-bone/50">{formatGhs(s.frameGhs)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">The scale</p>
-            {calibrated ? (
-              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-                Measured
-              </span>
-            ) : (
-              <span className="rounded-full bg-kasa-black/10 px-2.5 py-1 text-[10px] font-semibold text-kasa-muted dark:bg-white/10">
-                Estimated
-              </span>
-            )}
-          </div>
+                <Button size="lg" onClick={addPiece} className="mt-6 w-full">
+                  <ImagePlus />
+                  Hang it on the wall
+                </Button>
 
-          <p className="mt-3 text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-            {scaleNote
-              ? `${scaleNote} Every frame is drawn to that scale, so what you see is the size it will be.`
-              : "Every frame is drawn against the size of this wall. Measure one thing in the photo and the rest follows—it beats guessing the wall in metres."}
-          </p>
+                <h3 className="mt-9 text-[15px] text-bone">Or start from a layout</h3>
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => applyPreset(p.key)}
+                      className="flex h-[4.75rem] flex-col items-center justify-center gap-2 rounded-[12px] border border-bone/10 text-[12px] text-bone/60 transition-[border-color,color,transform] duration-200 hover:border-bone/35 hover:text-bone active:scale-[0.96]"
+                    >
+                      <LayoutGlyph kind={p.key} />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
 
-          <div className="mt-4 grid gap-3">
-            <Button
-              variant={measuring ? "primary" : "outline"}
-              size="sm"
-              onClick={() => (measuring ? finishMeasuring() : startMeasuring())}
-            >
-              <Ruler className="h-3.5 w-3.5" />
-              {measuring ? "Done measuring" : calibrated ? "Measure again" : "Measure something in the photo"}
-            </Button>
+                {pieces.length > 0 ? (
+                  <>
+                    <h3 className="mt-9 text-[15px] text-bone">Tilt every piece</h3>
+                    <div className="mt-3 grid grid-cols-4 gap-2">
+                      {[0, 15, 30, 45].map((deg) => (
+                        <Button key={deg} variant="secondary" onClick={() => tiltAll(deg)} className="px-0 tabular-nums">
+                          {deg}°
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
 
-            {measuring ? (
-              <div className="grid gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-                  Drag the green <span className="font-semibold">A</span> and <span className="font-semibold">B</span>{" "}
-                  dots onto each end of the thing you are measuring, then tell us how long it really is.
-                </p>
-
-                <div className="grid gap-2">
-                  <Label className="text-xs">What are you measuring?</Label>
-                  <Select
-                    value={referenceKey}
-                    onValueChange={(v) => {
-                      setReferenceKey(v);
-                      const preset = SCALE_REFERENCES.find((r) => r.key === v);
-                      if (preset && v !== "custom") setReferenceCm(preset.cm);
-                    }}
+            {panel === "piece" && selected ? (
+              <div className="p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-title">{getProduct(selected.productId)?.name}</p>
+                    <p className="mt-1 text-[13px] text-bone/50">{styleMetaLabel(selected.style)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Deselect this piece"
+                    onClick={() => setSelectedId(null)}
+                    className="-mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bone/15 text-bone/70 transition-[border-color,color,transform] duration-200 hover:border-bone/40 hover:text-bone active:scale-[0.95]"
                   >
-                    <SelectTrigger>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-6 grid gap-1">
+                  <Label htmlFor="viz-piece-size">Size</Label>
+                  <Select value={selected.sizeLabel} onValueChange={(v) => updateSelected({ sizeLabel: v })}>
+                    <SelectTrigger id="viz-piece-size">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SCALE_REFERENCES.map((r) => (
-                        <SelectItem key={r.key} value={r.key}>
-                          {r.label}
-                          {r.key === "custom" ? "" : ` · ${r.cm} cm`}
+                      {(getProduct(selected.productId)?.sizes ?? []).map((s) => (
+                        <SelectItem key={s.label} value={s.label}>
+                          {s.label} in · {formatGhs(s.frameGhs)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-kasa-muted dark:text-kasa-sand/70">
-                    {SCALE_REFERENCES.find((r) => r.key === referenceKey)?.hint}
-                  </p>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label className="text-xs">How long is it, in centimetres?</Label>
-                  <Input
-                    type="number"
-                    min={5}
-                    max={2000}
-                    value={referenceCm}
-                    onChange={(e) => setReferenceCm(Number(e.target.value))}
+                <div className="mt-7">
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="viz-tilt">Tilt</Label>
+                    <span className="text-[13px] tabular-nums text-bone">{Math.round(selected.rotation)}°</span>
+                  </div>
+                  <Range
+                    id="viz-tilt"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    value={selected.rotation}
+                    onChange={(v) => updateSelected({ rotation: v })}
                   />
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="secondary" onClick={() => updateSelected({ rotation: selected.rotation - 5 })}>
+                      <RotateCcw />5°
+                    </Button>
+                    <Button variant="secondary" onClick={() => updateSelected({ rotation: 0 })}>
+                      Level
+                    </Button>
+                    <Button variant="secondary" onClick={() => updateSelected({ rotation: selected.rotation + 5 })}>
+                      <RotateCw />5°
+                    </Button>
+                  </div>
                 </div>
 
-                <Button size="sm" onClick={finishMeasuring}>
-                  Use this scale
-                </Button>
+                <div className="mt-7">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-[13px] text-bone/60">Height off the floor</p>
+                    <span className="text-[13px] tabular-nums text-bone">
+                      {Math.round(hangHeightCm(selected.yPct, wallHeightCm))} cm to the centre
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    onClick={() => updateSelected({ yPct: clamp(eyeLevelPct, 3, 97) })}
+                  >
+                    <Ruler />
+                    Hang at eye level, {EYE_LEVEL_CM} cm
+                  </Button>
+                </div>
+
+                <div className="mt-7 grid grid-cols-3 gap-2">
+                  <Button variant="secondary" onClick={() => updateSelected({ rotated: !selected.rotated })}>
+                    {selected.rotated ? <RectangleVertical /> : <RectangleHorizontal />}
+                    Turn
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const copy = { ...selected, id: uid(), xPct: clamp(selected.xPct + 8, 3, 97) };
+                      setPieces((prev) => [...prev, copy]);
+                      setSelectedId(copy.id);
+                    }}
+                  >
+                    <Copy />
+                    Copy
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setPieces((prev) => prev.filter((p) => p.id !== selected.id));
+                      setSelectedId(null);
+                    }}
+                  >
+                    <Trash2 />
+                    Remove
+                  </Button>
+                </div>
+
+                <div className="mt-8 border-t border-bone/10 pt-7">
+                  <h3 className="text-[15px] text-bone">Your photo inside</h3>
+                  <label className="relative mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-[14px] border border-dashed border-bone/25 px-4 text-[14px] text-bone/80 transition-[border-color,color] hover:border-bone/50 hover:text-bone has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-bone">
+                    <ImagePlus className="h-4 w-4" />
+                    {selected.artUrl ? "Change the photo" : "Choose a photo"}
+                    <input type="file" accept="image/*" className="sr-only" onChange={(e) => onArtFile(e.target.files?.[0])} />
+                  </label>
+
+                  {selected.artUrl ? (
+                    <div className="mt-4 grid gap-5">
+                      <Button
+                        variant={adjustingArt ? "primary" : "secondary"}
+                        onClick={() => setAdjustingArt((v) => !v)}
+                        className="w-full"
+                      >
+                        <Crop />
+                        {adjustingArt ? "Done framing" : "Frame the photo"}
+                      </Button>
+                      {adjustingArt ? (
+                        <p className="-mt-2 text-[13px] leading-relaxed text-bone/50">
+                          Drag inside the frame to move the photo, or scroll to zoom. The frame stays put.
+                        </p>
+                      ) : null}
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <Label htmlFor="viz-zoom">Zoom</Label>
+                          <span className="text-[13px] tabular-nums text-bone">{(selected.artZoom ?? 1).toFixed(2)}×</span>
+                        </div>
+                        <Range
+                          id="viz-zoom"
+                          min={1}
+                          max={4}
+                          step={0.05}
+                          value={selected.artZoom ?? 1}
+                          onChange={(zoom) => {
+                            const limit = artPanLimit({ ...selected, artZoom: zoom });
+                            updateSelected({
+                              artZoom: zoom,
+                              artX: clamp(selected.artX ?? 0, -limit, limit),
+                              artY: clamp(selected.artY ?? 0, -limit, limit),
+                            });
+                          }}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="viz-pan-x">Left and right</Label>
+                          <Range
+                            id="viz-pan-x"
+                            min={-artPanLimit(selected)}
+                            max={artPanLimit(selected)}
+                            step={0.5}
+                            value={selected.artX ?? 0}
+                            disabled={artPanLimit(selected) === 0}
+                            onChange={(v) => updateSelected({ artX: v })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="viz-pan-y">Up and down</Label>
+                          <Range
+                            id="viz-pan-y"
+                            min={-artPanLimit(selected)}
+                            max={artPanLimit(selected)}
+                            step={0.5}
+                            value={selected.artY ?? 0}
+                            disabled={artPanLimit(selected) === 0}
+                            onChange={(v) => updateSelected({ artY: v })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            updateSelected({ artFit: (selected.artFit ?? "cover") === "cover" ? "contain" : "cover" })
+                          }
+                        >
+                          {(selected.artFit ?? "cover") === "cover" ? "Show it all" : "Fill the frame"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => updateSelected({ artZoom: 1, artX: 0, artY: 0, artFit: "cover" })}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                      <p className="text-[13px] leading-relaxed text-bone/50">
+                        {(selected.artFit ?? "cover") === "cover"
+                          ? "Filling the frame crops the edges. Zoom in to choose which part is kept."
+                          : "The whole photo shows, so there may be a margin inside the frame."}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-[13px] leading-relaxed text-bone/50">
+                      It stays on your device. Nothing is uploaded until you send the wall to us.
+                    </p>
+                  )}
+                </div>
               </div>
             ) : null}
 
-            <div className="grid gap-2">
-              <Label className="text-xs">
-                Wall width ({wallCm} cm){calibrated ? " — from your measurement" : ""}
-              </Label>
-              <input
-                type="range"
-                min={100}
-                max={900}
-                step={5}
-                value={wallCm}
-                onChange={(e) => {
-                  setWallCm(Number(e.target.value));
-                  setCalibrated(false);
-                  setScaleNote(null);
-                }}
-                className="accent-kasa-gold"
-              />
-              <Label className="text-xs">
-                Wall height ({wallHeightCm} cm){quadMode === "custom" ? " — from your corners" : ""}
-              </Label>
-              <input
-                type="range"
-                min={150}
-                max={700}
-                step={5}
-                value={wallHeightCm}
-                onChange={(e) => setWallHeightCm(Number(e.target.value))}
-                className="accent-kasa-gold"
-              />
-            </div>
+            {panel === "wall" ? (
+              <div className="p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-title">The scale</h3>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px]",
+                      calibrated ? "bg-emerald-400/10 text-emerald-300" : "bg-kasa-gold/10 text-kasa-goldsoft",
+                    )}
+                  >
+                    {calibrated ? <Check className="h-3 w-3" /> : null}
+                    {calibrated ? "Measured" : "Estimated"}
+                  </span>
+                </div>
+                <p className="mt-2 text-[14px] leading-relaxed text-bone/60 text-pretty">
+                  {scaleNote
+                    ? `${scaleNote} Every frame is drawn to that scale, so what you see is the size it will be.`
+                    : "Measure one thing in the photo, a door or a sofa, and every frame follows. It beats guessing the wall in metres."}
+                </p>
 
-            <label className="flex items-center gap-3 text-xs">
-              <input
-                type="checkbox"
-                checked={showRule}
-                onChange={(e) => setShowRule(e.target.checked)}
-                className="h-4 w-4 accent-kasa-gold"
-              />
-              Show a 1-metre rule and the 145 cm hanging line
-            </label>
+                {measuring ? (
+                  <div className="mt-5 grid gap-5 rounded-[16px] border border-emerald-400/25 bg-emerald-400/[0.05] p-4">
+                    <div className="grid gap-1">
+                      <Label htmlFor="viz-reference">What are you measuring?</Label>
+                      <Select
+                        value={referenceKey}
+                        onValueChange={(v) => {
+                          setReferenceKey(v);
+                          const preset = SCALE_REFERENCES.find((r) => r.key === v);
+                          if (preset && v !== "custom") setReferenceCm(preset.cm);
+                        }}
+                      >
+                        <SelectTrigger id="viz-reference">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SCALE_REFERENCES.map((r) => (
+                            <SelectItem key={r.key} value={r.key}>
+                              {r.label}
+                              {r.key === "custom" ? "" : ` · ${r.cm} cm`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="pt-1 text-[13px] text-bone/50">{reference?.hint}</p>
+                    </div>
+                    <div className="grid gap-1">
+                      <Label htmlFor="viz-reference-cm">How long is it, in centimetres?</Label>
+                      <Input
+                        id="viz-reference-cm"
+                        type="number"
+                        inputMode="numeric"
+                        min={5}
+                        max={2000}
+                        value={referenceCm}
+                        onChange={(e) => setReferenceCm(Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="ghost" onClick={cancelMeasuring}>
+                        Cancel
+                      </Button>
+                      <Button onClick={finishMeasuring}>Use this scale</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="secondary" className="mt-5 w-full" onClick={startMeasuring}>
+                    <Ruler />
+                    {calibrated ? "Measure again" : "Measure something in the photo"}
+                  </Button>
+                )}
+
+                <div className="mt-8 grid gap-6">
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <Label htmlFor="viz-wall-w">Wall width</Label>
+                      <span className="text-[13px] tabular-nums text-bone">{wallCm} cm</span>
+                    </div>
+                    <Range
+                      id="viz-wall-w"
+                      min={100}
+                      max={900}
+                      step={5}
+                      value={wallCm}
+                      onChange={(v) => {
+                        setWallCm(v);
+                        setCalibrated(false);
+                        setScaleNote(null);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <Label htmlFor="viz-wall-h">Wall height</Label>
+                      <span className="text-[13px] tabular-nums text-bone">
+                        {wallHeightCm} cm{quadMode === "custom" ? ", from the corners" : ""}
+                      </span>
+                    </div>
+                    <Range
+                      id="viz-wall-h"
+                      min={150}
+                      max={700}
+                      step={5}
+                      value={wallHeightCm}
+                      onChange={setWallHeightCm}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-4 border-t border-bone/10 pt-4">
+                  <p id="viz-rule-label" className="text-[14px] text-bone/70">
+                    Show a 1 m rule and the {EYE_LEVEL_CM} cm line
+                  </p>
+                  <Switch checked={showRule} onCheckedChange={setShowRule} aria-labelledby="viz-rule-label" />
+                </div>
+
+                <div className="mt-6 border-t border-bone/10 pt-7">
+                  <h3 className="text-title">The wall in your photo</h3>
+                  <p className="mt-2 text-[14px] leading-relaxed text-bone/60 text-pretty">
+                    We read the ceiling and skirting lines to work out how your wall recedes, then hang everything on
+                    that plane. If the guess is off, drag the gold corners onto the wall.
+                  </p>
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <Button variant={adjustingWall ? "primary" : "secondary"} onClick={() => setAdjustingWall((v) => !v)}>
+                      <Scan />
+                      {adjustingWall ? "Done" : "Adjust corners"}
+                    </Button>
+                    <Button variant="secondary" onClick={() => detect(true)}>
+                      <ScanLine />
+                      Read again
+                    </Button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuadMode("fitted");
+                      setWallNote(null);
+                    }}
+                    className="mt-2 inline-flex min-h-11 items-center text-[13px] text-bone/50 underline decoration-bone/20 underline-offset-4 transition-colors hover:text-bone hover:decoration-bone/60"
+                  >
+                    Reset to a flat wall
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-5 grid gap-2">
-            <Label>The wall in your photo</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={adjustingWall ? "primary" : "outline"}
-                size="sm"
-                onClick={() => setAdjustingWall((v) => !v)}
-              >
-                {adjustingWall ? "Done" : "Adjust corners"}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => detect(true)}>
-                <Scan className="h-3.5 w-3.5" />
-                Read again
-              </Button>
+          {/* The running total, always in reach. */}
+          <div className="border-t border-bone/10 bg-ink-overlay p-5 sm:p-6 lg:rounded-br-[28px]">
+            <div className="flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[13px] text-bone/50">
+                  {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
+                  {pieces.length > 0 ? (installation ? ", installed" : ", frames only") : ""}
+                </p>
+                <p className="mt-1 text-display-sm tabular-nums">{formatGhs(cost.totalGhs)}</p>
+              </div>
+              <div className="flex items-center">
+                <p id="viz-install-label" className="text-right text-[13px] leading-snug text-bone/60">
+                  Installation
+                  <br />
+                  <span className="text-bone/50">{formatGhs(INSTALLATION_GHS)} a frame</span>
+                </p>
+                <Switch checked={installation} onCheckedChange={setInstallation} aria-labelledby="viz-install-label" />
+              </div>
             </div>
+            <Button size="lg" onClick={openPreview} disabled={pieces.length === 0} className="mt-5 w-full">
+              Preview the finished wall
+              <ArrowRight />
+            </Button>
+          </div>
+        </aside>
+      </div>
+
+      {/* The estimate, line by line, once there is something to add up. */}
+      {pieces.length > 0 ? (
+        <section aria-labelledby="viz-breakdown" className="mt-10 grid gap-8 lg:mt-12 lg:grid-cols-12 lg:gap-10">
+          <div className="lg:col-span-4">
+            <h2 id="viz-breakdown" className="text-title">
+              The estimate, line by line
+            </h2>
+            <p className="mt-3 max-w-[46ch] text-[14px] leading-relaxed text-bone/50 text-pretty">
+              From our published price list. A 50% deposit confirms the order; site visit transport is charged at the
+              Uber or Bolt fare and agreed with you first.
+            </p>
             <button
               type="button"
               onClick={() => {
-                setQuadMode("fitted");
-                setWallNote(null);
+                setPieces([]);
+                setSelectedId(null);
               }}
-              className="py-2 text-left text-[11px] text-kasa-muted underline-offset-4 hover:underline dark:text-kasa-sand/70 sm:py-0"
+              className="mt-3 inline-flex min-h-11 items-center text-[13px] text-bone/50 underline decoration-bone/20 underline-offset-4 transition-colors hover:text-bone hover:decoration-bone/60"
             >
-              Reset to a flat wall
+              Start the wall again
             </button>
-            <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-              We read the ceiling and skirting lines to work out how your wall recedes, then hang everything on that
-              plane. Drag the gold corners onto the wall if the guess is off.
-            </p>
           </div>
-
-          <div className="mt-6 h-px bg-kasa-black/10 dark:bg-white/10" />
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">The piece</p>
-
-          <div className="mt-4 grid gap-4">
-            <div className="grid gap-2">
-              <Label>Frame type</Label>
-              <Select value={style} onValueChange={(v) => setStyle(v as FrameStyle)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STYLES.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Size (inches)</Label>
-              <Select value={sizeLabel} onValueChange={setSizeLabel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(product?.sizes ?? []).map((s) => (
-                    <SelectItem key={s.label} value={s.label}>
-                      {s.label} in · {Math.round(s.widthIn * CM_PER_INCH)} × {Math.round(s.heightIn * CM_PER_INCH)} cm
-                      · {formatGhs(s.frameGhs)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Inches mean little to most people; centimetres against the
-                  wall are what tell you whether it will look right. */}
-              {(() => {
-                const size = currentSize();
-                if (!size) return null;
-                const wCm = size.widthIn * CM_PER_INCH;
-                const hCm = size.heightIn * CM_PER_INCH;
-                const share = Math.round((wCm / wallCm) * 100);
-                return (
-                  <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-                    <span className="font-semibold">
-                      {Math.round(wCm)} × {Math.round(hCm)} cm
-                    </span>{" "}
-                    on the wall — {share}% of its width — hung with the centre{" "}
-                    {EYE_LEVEL_CM} cm off the floor.
-                  </p>
-                );
-              })()}
-            </div>
-
-            <Button onClick={addPiece} className="w-full">
-              <ImagePlus className="h-4 w-4" />
-              Add to wall
-            </Button>
-
-            <div className="grid gap-2">
-              <Label>Start from a layout</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => applyPreset("single")}>
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Single
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => applyPreset("triptych")}>
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Triptych
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => applyPreset("grid")}>
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  2 × 3 grid
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => applyPreset("stair")}>
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Staircase
-                </Button>
-              </div>
-            </div>
-
-            {pieces.length > 0 ? (
-              <div className="grid gap-2">
-                <Label>Tilt every piece</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[0, 15, 30, 45].map((deg) => (
-                    <Button key={deg} variant="outline" size="sm" onClick={() => tiltAll(deg)}>
-                      {deg}°
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {selected ? (
-          <div className="mt-4 rounded-[2rem] border border-kasa-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Selected piece</p>
-
-            <div className="mt-4 grid gap-3">
-              <Select value={selected.sizeLabel} onValueChange={(v) => updateSelected({ sizeLabel: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(getProduct(selected.productId)?.sizes ?? []).map((s) => (
-                    <SelectItem key={s.label} value={s.label}>
-                      {s.label} in · {formatGhs(s.frameGhs)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="grid gap-2">
-                <Label className="flex items-center justify-between">
-                  <span>Tilt</span>
-                  <span className="font-mono text-xs text-kasa-muted">{Math.round(selected.rotation)}°</span>
-                </Label>
-                <input
-                  type="range"
-                  min={-60}
-                  max={60}
-                  step={1}
-                  value={selected.rotation}
-                  onChange={(e) => updateSelected({ rotation: Number(e.target.value) })}
-                  className="accent-kasa-gold"
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => updateSelected({ rotation: selected.rotation - 5 })}>
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    -5°
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => updateSelected({ rotation: 0 })}>
-                    Level
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => updateSelected({ rotation: selected.rotation + 5 })}>
-                    <RotateCw className="h-3.5 w-3.5" />
-                    +5°
-                  </Button>
-                </div>
-              </div>
-
-              {/* Height off the floor, which is what decides whether a mockup
-                  looks right once there is furniture under it. */}
-              <div className="grid gap-2">
-                <Label className="flex items-center justify-between">
-                  <span>Height off the floor</span>
-                  <span className="font-mono text-xs text-kasa-muted">
-                    {Math.round(hangHeightCm(selected.yPct, wallHeightCm))} cm to the centre
-                  </span>
-                </Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => updateSelected({ yPct: clamp(eyeLevelPct, 3, 97) })}
-                >
-                  <Ruler className="h-3.5 w-3.5" />
-                  Hang at eye level (145 cm)
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant="outline" size="sm" onClick={() => updateSelected({ rotated: !selected.rotated })}>
-                  Turn
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const copy = { ...selected, id: uid(), xPct: clamp(selected.xPct + 8, 3, 97) };
-                    setPieces((prev) => [...prev, copy]);
-                    setSelectedId(copy.id);
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPieces((prev) => prev.filter((p) => p.id !== selected.id));
-                    setSelectedId(null);
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Remove
-                </Button>
-              </div>
-
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-kasa-black/20 px-4 py-2.5 text-xs font-medium transition hover:border-kasa-gold hover:text-kasa-gold dark:border-white/20">
-                <ImagePlus className="h-3.5 w-3.5" />
-                {selected.artUrl ? "Change the photo inside" : "Put your photo inside"}
-                <input type="file" accept="image/*" className="sr-only" onChange={(e) => onArtFile(e.target.files?.[0])} />
-              </label>
-
-              {selected.artUrl ? (
-                <div className="grid gap-3 rounded-2xl border border-kasa-black/10 p-4 dark:border-white/10">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Frame the photo</Label>
-                    <Button
-                      variant={adjustingArt ? "primary" : "outline"}
-                      size="sm"
-                      onClick={() => setAdjustingArt((v) => !v)}
-                    >
-                      <Crop className="h-3.5 w-3.5" />
-                      {adjustingArt ? "Done" : "Adjust"}
-                    </Button>
-                  </div>
-
-                  {adjustingArt ? (
-                    <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-                      Drag inside the frame to move the photo, or scroll to zoom. The frame stays put while you do.
-                    </p>
-                  ) : null}
-
-                  <div className="grid gap-1.5">
-                    <Label className="flex items-center justify-between text-xs">
-                      <span>Zoom</span>
-                      <span className="font-mono text-[11px] text-kasa-muted">
-                        {(selected.artZoom ?? 1).toFixed(2)}×
-                      </span>
-                    </Label>
-                    <input
-                      type="range"
-                      min={1}
-                      max={4}
-                      step={0.05}
-                      value={selected.artZoom ?? 1}
-                      onChange={(e) => {
-                        const zoom = Number(e.target.value);
-                        const limit = artPanLimit({ ...selected, artZoom: zoom });
-                        updateSelected({
-                          artZoom: zoom,
-                          artX: clamp(selected.artX ?? 0, -limit, limit),
-                          artY: clamp(selected.artY ?? 0, -limit, limit),
-                        });
+          <div className="min-w-0 lg:col-span-8">
+            <div className="overflow-x-auto [scrollbar-width:thin]">
+              <table className="w-full min-w-[34rem] text-left text-[15px]">
+                <thead className="text-[13px] text-bone/50">
+                  <tr className="border-b border-bone/15">
+                    <th scope="col" className="py-3 pr-4 font-normal">
+                      Piece
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-normal">
+                      Size
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-normal">
+                      Frame
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-normal">
+                      Install
+                    </th>
+                    <th scope="col" className="py-3 pl-4 text-right font-normal">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums">
+                  {cost.lines.map((line) => (
+                    <tr
+                      key={line.piece.id}
+                      onClick={() => {
+                        setSelectedId(line.piece.id);
+                        setPanel("piece");
                       }}
-                      className="accent-kasa-gold"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="grid gap-1.5">
-                      <Label className="text-[11px]">Left / right</Label>
-                      <input
-                        type="range"
-                        min={-artPanLimit(selected)}
-                        max={artPanLimit(selected)}
-                        step={0.5}
-                        value={selected.artX ?? 0}
-                        disabled={artPanLimit(selected) === 0}
-                        onChange={(e) => updateSelected({ artX: Number(e.target.value) })}
-                        className="accent-kasa-gold disabled:opacity-40"
-                      />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label className="text-[11px]">Up / down</Label>
-                      <input
-                        type="range"
-                        min={-artPanLimit(selected)}
-                        max={artPanLimit(selected)}
-                        step={0.5}
-                        value={selected.artY ?? 0}
-                        disabled={artPanLimit(selected) === 0}
-                        onChange={(e) => updateSelected({ artY: Number(e.target.value) })}
-                        className="accent-kasa-gold disabled:opacity-40"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        updateSelected({
-                          artFit: (selected.artFit ?? "cover") === "cover" ? "contain" : "cover",
-                        })
-                      }
+                      className={cn(
+                        "cursor-pointer border-b border-bone/10 transition-colors hover:bg-bone/[0.03]",
+                        line.piece.id === selectedId && "bg-bone/[0.04]",
+                      )}
                     >
-                      {(selected.artFit ?? "cover") === "cover" ? "Show whole photo" : "Fill the frame"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateSelected({ artZoom: 1, artX: 0, artY: 0, artFit: "cover" })}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-
-                  <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-                    {(selected.artFit ?? "cover") === "cover"
-                      ? "Filling the frame crops the edges. Zoom in to choose which part is kept."
-                      : "The whole photo is visible, so there may be a margin inside the frame."}
-                  </p>
-                </div>
-              ) : null}
-
-              <p className="text-[11px] leading-relaxed text-kasa-muted dark:text-kasa-sand/70">
-                {(() => {
-                  const { wCm, hCm } = pieceCm(selected);
-                  const top = Math.round(hangHeightCm(selected.yPct, wallHeightCm) + hCm / 2);
-                  return `${Math.round(wCm)} × ${Math.round(hCm)} cm on the wall, top edge ${top} cm up.`;
-                })()}
-              </p>
+                      <th scope="row" className="py-4 pr-4 font-normal text-bone">
+                        {line.name}
+                      </th>
+                      <td className="px-4 py-4 text-bone/50">{line.piece.sizeLabel} in</td>
+                      <td className="px-4 py-4 text-right text-bone/70">{formatGhs(line.frameGhs)}</td>
+                      <td className="px-4 py-4 text-right text-bone/50">
+                        {line.installGhs > 0 ? formatGhs(line.installGhs) : "None"}
+                      </td>
+                      <td className="py-4 pl-4 text-right text-bone">{formatGhs(line.totalGhs)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colSpan={4} className="py-4 pr-4 text-right text-[13px] font-normal text-bone/50">
+                      Total
+                    </th>
+                    <td className="py-4 pl-4 text-right text-title tabular-nums">{formatGhs(cost.totalGhs)}</td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
-        ) : null}
+        </section>
+      ) : null}
 
-        <div className="mt-4 rounded-[2rem] border border-kasa-black/10 bg-kasa-black p-6 text-kasa-cream dark:border-white/10">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm text-kasa-sand/80">
-              {pieces.length} piece{pieces.length === 1 ? "" : "s"}
-            </span>
-            <span className="font-display text-2xl font-semibold">{formatGhs(cost.totalGhs)}</span>
-          </div>
-
-          <dl className="mt-3 grid gap-1 text-xs text-kasa-sand/80">
-            <div className="flex justify-between">
-              <dt>Frames</dt>
-              <dd>{formatGhs(cost.framesGhs)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Installation</dt>
-              <dd>{cost.installGhs > 0 ? formatGhs(cost.installGhs) : "Not included"}</dd>
-            </div>
-          </dl>
-
-          <label className="mt-4 flex items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={installation}
-              onChange={(e) => setInstallation(e.target.checked)}
-              className="h-4 w-4 accent-kasa-gold"
-            />
-            Include installation (GHS 100 per frame)
-          </label>
-
-          <div className="mt-5 grid gap-2">
-            <Button onClick={openPreview} disabled={pieces.length === 0} className="w-full">
-              <Eye className="h-4 w-4" />
-              Preview the finished wall
-            </Button>
-            {pieces.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPieces([]);
-                  setSelectedId(null);
-                }}
-                className="text-xs text-kasa-sand/70 underline-offset-4 hover:underline"
-              >
-                Start the wall again
-              </button>
-            ) : null}
-          </div>
-
-          <p className="mt-4 text-[11px] leading-relaxed text-kasa-sand/60">
-            An estimate from our published price list. A 50% deposit confirms the order; site visit transport is
-            charged at the Uber or Bolt fare and agreed with you first.
-          </p>
-        </div>
-
-        {notice ? <p className="mt-3 text-xs text-red-600">{notice}</p> : null}
-      </div>
+      {/* The photo may already be decoded before the handler is attached. */}
+      <ImageReadyProbe imgRef={imgRef} onReady={() => detect(true)} pending={pendingDetect} />
     </div>
+  );
+}
+
+/** A piece used only to draw a finish swatch, at a size every frame type offers. */
+function swatchPiece(style: FrameStyle): Piece {
+  return {
+    id: `swatch-${style}`,
+    productId: STYLE_PRODUCT[style],
+    sizeLabel: "12 × 16",
+    xPct: 50,
+    yPct: 50,
+    rotation: 0,
+    style,
+    rotated: false,
+  };
+}
+
+function styleMetaLabel(style: FrameStyle) {
+  return STYLES.find((s) => s.key === style)?.label ?? "";
+}
+
+function StageToggle({
+  pressed,
+  onClick,
+  label,
+  children,
+}: {
+  pressed: boolean;
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-9 w-9 items-center justify-center rounded-full transition-[background-color,color,transform] duration-200 active:scale-[0.94] sm:h-10 sm:w-10",
+        pressed ? "bg-bone text-ink" : "text-bone/70 hover:bg-bone/10 hover:text-bone",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] border border-bone/15 px-1 font-sans text-[11px] text-bone/70">
+      {children}
+    </kbd>
+  );
+}
+
+/** A thin bone track that fills up to the value, with a round thumb. */
+function Range({
+  id,
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  disabled,
+}: {
+  id?: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}) {
+  const fill = max > min ? ((value - min) / (max - min)) * 100 : 0;
+  return (
+    <input
+      id={id}
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="range"
+      style={{ "--fill": `${clamp(fill, 0, 100)}%` } as React.CSSProperties}
+    />
+  );
+}
+
+/** Tiny drawings of the four starting layouts. */
+function LayoutGlyph({ kind }: { kind: Preset }) {
+  const rects: [number, number, number, number][] =
+    kind === "single"
+      ? [[15, 5, 10, 14]]
+      : kind === "triptych"
+        ? [
+            [4, 7, 9, 12],
+            [15.5, 7, 9, 12],
+            [27, 7, 9, 12],
+          ]
+        : kind === "grid"
+          ? [
+              [6, 3, 8, 7],
+              [16, 3, 8, 7],
+              [26, 3, 8, 7],
+              [6, 13, 8, 7],
+              [16, 13, 8, 7],
+              [26, 13, 8, 7],
+            ]
+          : [
+              [1, 14, 6, 8],
+              [9, 11, 6, 8],
+              [17, 8, 6, 8],
+              [25, 5, 6, 8],
+              [33, 2, 6, 8],
+            ];
+  return (
+    <svg aria-hidden viewBox="0 0 40 24" className="h-6 w-10">
+      {rects.map(([x, y, w, h], i) => (
+        <rect key={i} x={x} y={y} width={w} height={h} rx={0.6} fill="currentColor" fillOpacity={0.18} stroke="currentColor" strokeWidth={1} />
+      ))}
+    </svg>
   );
 }
 

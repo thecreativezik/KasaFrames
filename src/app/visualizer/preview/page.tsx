@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MockupPreview } from "@/components/visualizer/mockup-preview";
+import { PageIntro } from "@/components/layout/page-intro";
 
 export const metadata: Metadata = {
   title: "Your wall preview",
@@ -8,19 +9,12 @@ export const metadata: Metadata = {
 
 export default function VisualizerPreviewPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Preview</p>
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-          Here is the wall, before anything is ordered.
-        </h1>
-        <p className="mt-5 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          Every piece at true size against your wall, with what each one costs. Send it to the studio and we will
-          take it from here.
-        </p>
-      </header>
+    <div className="shell pb-24 pt-16 lg:pb-32 lg:pt-24">
+      <PageIntro title="Here is the wall, before anything is ordered.">
+        Every piece at true size against your wall, with what each one costs. Send it to the studio and we will take it from here.
+      </PageIntro>
 
-      <div className="mt-12">
+      <div className="mt-16 lg:mt-20">
         <MockupPreview />
       </div>
     </div>

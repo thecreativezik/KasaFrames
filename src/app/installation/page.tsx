@@ -1,71 +1,122 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
+import { PageIntro } from "@/components/layout/page-intro";
 import { Reveal } from "@/components/motion/reveal";
+import { Button } from "@/components/ui/button";
+import { INSTALLATION_GHS } from "@/lib/data/catalog";
+import { formatGhs } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Installation experience",
-  description: "White-glove installation, precision alignment, and calm project management across Accra.",
+  description: "Careful installation, precise alignment, and calm project management across Accra.",
 };
+
+const steps = [
+  {
+    title: "Survey and mark",
+    body: "We check the wall, plan the load and read the sightlines before any fixing touches the surface.",
+  },
+  {
+    title: "Precision hang",
+    body: "Small adjustments until the composition reads as one gesture, not a set of separate objects.",
+  },
+  {
+    title: "Reveal and care",
+    body: "A final clean, hidden hardware, and a word on keeping the finish looking right.",
+  },
+];
+
+const shots = [
+  {
+    src: "/media/gallery-wall/corridor-portrait-grid.jpg",
+    title: "Corridor grid",
+    detail: "A4 and A3, black moulding",
+  },
+  {
+    src: "/media/staircase/stair-cascade-quotes.jpg",
+    title: "Stair cascade",
+    detail: "Set out from the nosing, not the floor",
+  },
+];
 
 export default function InstallationPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Installation</p>
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-          The install is where luxury becomes real.
-        </h1>
-        <p className="mt-5 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          Dust control, laser alignment, and quiet coordination—so your home or venue stays composed.
-        </p>
-      </header>
+    <div className="shell pb-24 pt-16 lg:pb-36 lg:pt-24">
+      <PageIntro title="The install is where a wall becomes finished.">
+        Careful setting out, levelling and quiet coordination, so your home or venue stays composed while we work.
+      </PageIntro>
 
-      <section className="mt-14 grid gap-8 lg:grid-cols-3">
-        {[
-          { title: "Survey & mark", body: "Stud mapping, load planning, and sightline checks before any anchor touches the wall." },
-          { title: "Precision hang", body: "Micro-adjustments until the composition reads as one gesture—not separate objects." },
-          { title: "Reveal & care", body: "Final cleaning, hardware concealment, and guidance on maintaining the finish." },
-        ].map((s) => (
-          <Reveal key={s.title} className="rounded-[2rem] border border-kasa-black/10 bg-white/70 p-8 dark:border-white/10 dark:bg-white/5">
-            <h2 className="font-display text-xl font-semibold">{s.title}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{s.body}</p>
+      <section aria-label="How an install runs" className="mt-16 lg:mt-24">
+        <ol className="grid border-t border-bone/10 lg:grid-cols-3">
+          {steps.map((s, idx) => (
+            <li
+              key={s.title}
+              className="border-b border-bone/10 py-8 lg:border-b-0 lg:border-r lg:px-8 lg:py-10 lg:first:pl-0 lg:last:border-r-0"
+            >
+              <Reveal delay={idx * 0.06}>
+                <span className="text-[13px] tabular-nums text-bone/50">0{idx + 1}</span>
+                <h2 className="mt-4 text-title">{s.title}</h2>
+                <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-bone/60 text-pretty">{s.body}</p>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-label="Installed walls" className="mt-20 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:mt-28">
+        {shots.map((shot) => (
+          <Reveal key={shot.src}>
+            <figure>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-tile bg-ink-raised">
+                <Image
+                  src={shot.src}
+                  alt={`${shot.title}: ${shot.detail}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, 50vw"
+                />
+              </div>
+              <figcaption className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="text-[15px] text-bone">{shot.title}</span>
+                <span className="text-[13px] text-bone/50">{shot.detail}</span>
+              </figcaption>
+            </figure>
           </Reveal>
         ))}
       </section>
 
-      <section className="mt-16 grid gap-6 sm:grid-cols-2">
-        {[
-          { src: "/media/gallery-wall/corridor-portrait-grid.jpg", caption: "Corridor grid · A4 and A3, black moulding" },
-          { src: "/media/staircase/stair-cascade-quotes.jpg", caption: "Stair cascade · set out from the nosing, not the floor" },
-        ].map((shot) => (
-          <Reveal key={shot.src} className="overflow-hidden rounded-[2rem] border border-kasa-black/10 dark:border-white/10">
-            <div className="relative aspect-[4/3]">
-              <Image src={shot.src} alt={shot.caption} fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+      <section className="mt-20 lg:mt-28">
+        <Reveal>
+          <figure>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-panel bg-ink-raised sm:aspect-[21/9]">
+              <Image
+                src="/media/gallery-wall/corridor-salon-wall.jpg"
+                alt="A salon wall hung along a corridor"
+                fill
+                className="object-cover"
+                sizes="100vw"
+              />
             </div>
-            <p className="border-t border-kasa-black/10 px-6 py-4 text-sm text-kasa-muted dark:border-white/10 dark:text-kasa-sand/80">
-              {shot.caption}
-            </p>
-          </Reveal>
-        ))}
+            <figcaption className="mt-4 text-[13px] text-bone/50">Corridor salon wall, mixed sizes on one sightline</figcaption>
+          </figure>
+        </Reveal>
       </section>
 
-      <section className="mt-16">
-        <Reveal className="relative aspect-[21/9] overflow-hidden rounded-[2rem] border border-kasa-black/10 dark:border-white/10">
-          <Image
-            src="/media/gallery-wall/corridor-salon-wall.jpg"
-            alt="Time-lapse still"
-            fill
-            className="object-cover"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-kasa-black/70 via-transparent to-transparent" />
-          <div className="absolute bottom-6 left-6 max-w-xl text-kasa-cream">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-kasa-gold">Time-lapse</p>
-            <p className="mt-2 text-sm text-kasa-sand/90">
-              Replace this hero with a hosted video (Mux / Vimeo) for a cinematic install story—optimized for mobile streaming.
-            </p>
-          </div>
-        </Reveal>
+      <section className="mt-20 grid gap-10 border-t border-bone/10 pt-14 lg:mt-28 lg:grid-cols-12 lg:items-end">
+        <div className="lg:col-span-8">
+          <p className="text-display-sm text-balance">
+            Installation is a flat {formatGhs(INSTALLATION_GHS)} per frame, whichever type you choose.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3 lg:col-span-4 lg:justify-end">
+          <Button asChild size="lg">
+            <Link href="/book">Book a consultation</Link>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <Link href="/policies#installation">How we work</Link>
+          </Button>
+        </div>
       </section>
     </div>
   );

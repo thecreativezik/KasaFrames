@@ -34,6 +34,8 @@ export function WallStage({
   onMeasurePointerDown,
   showRule = false,
   eyeLevelPct,
+  imageClassName = "max-h-[72vh]",
+  overlay,
   ...rest
 }: {
   roomSrc: string;
@@ -55,6 +57,10 @@ export function WallStage({
   showRule?: boolean;
   /** The 145 cm hanging line, in wall percent, drawn with the rule. */
   eyeLevelPct?: number;
+  /** Caps the photo's size; the default suits a page that scrolls around it. */
+  imageClassName?: string;
+  /** Drawn inside the photo's own box, so it can be placed in image fractions. */
+  overlay?: React.ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) {
   const localImg = React.useRef<HTMLImageElement>(null);
   const localStage = React.useRef<HTMLDivElement>(null);
@@ -97,18 +103,18 @@ export function WallStage({
   return (
     <div
       ref={stage}
-      className="relative w-full overflow-hidden rounded-[2rem] border border-kasa-black/10 bg-kasa-sand/20 dark:border-white/10"
+      className="relative w-full overflow-hidden rounded-panel border border-bone/10 bg-ink-raised "
       {...rest}
     >
       {/* Shrink-wrapped around the photo, so the overlays below share its exact
           box however the image is letterboxed by the height cap. */}
-      <div className="relative mx-auto w-fit overflow-hidden rounded-[1.75rem]">
+      <div className="relative mx-auto w-fit overflow-hidden rounded-panel">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={image}
         src={roomSrc}
         alt="The wall"
-        className="mx-auto block max-h-[72vh] w-auto max-w-full select-none"
+        className={`mx-auto block w-auto max-w-full select-none ${imageClassName}`}
         draggable={false}
         onLoad={() =>
           setSize({ w: image.current?.clientWidth ?? 0, h: image.current?.clientHeight ?? 0 })
@@ -141,7 +147,7 @@ export function WallStage({
                 }}
               >
                 <span
-                  className="absolute left-full whitespace-nowrap font-bold text-kasa-black dark:text-white"
+                  className="absolute left-full whitespace-nowrap font-bold text-white"
                   style={{ bottom: 0, marginLeft: 4 * pxPerCm, fontSize: 13 * pxPerCm }}
                 >
                   1 m
@@ -155,11 +161,11 @@ export function WallStage({
                     top: `${eyeLevelPct}%`,
                     height: Math.max(1, 0.7 * pxPerCm),
                     backgroundImage:
-                      "repeating-linear-gradient(90deg, rgba(201,169,98,0.95) 0 14px, transparent 14px 26px)",
+"repeating-linear-gradient(90deg, rgba(201,169,98,0.95) 0 14px, transparent 14px 26px)",
                   }}
                 >
                   <span
-                    className="absolute right-0 whitespace-nowrap font-bold text-kasa-black dark:text-white"
+                    className="absolute right-0 whitespace-nowrap font-bold text-white"
                     style={{ bottom: 3 * pxPerCm, fontSize: 13 * pxPerCm }}
                   >
                     145 cm · eye level
@@ -231,7 +237,7 @@ export function WallStage({
               type="button"
               aria-label={`Measuring point ${end.toUpperCase()}`}
               onPointerDown={onMeasurePointerDown?.(end)}
-              className="absolute z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-[11px] font-bold text-white shadow-lg active:cursor-grabbing"
+              className="absolute z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-[12px] font-bold text-white shadow-lg active:cursor-grabbing"
               style={{ left: `${measure[end].x * 100}%`, top: `${measure[end].y * 100}%` }}
             >
               {end.toUpperCase()}
@@ -239,6 +245,8 @@ export function WallStage({
           ))}
         </>
       ) : null}
+
+      {ready ? overlay : null}
       </div>
     </div>
   );
@@ -333,7 +341,7 @@ export function FrameView({
               className="pointer-events-none absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(120deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.03) 42%, rgba(255,255,255,0.12) 100%)",
+"linear-gradient(120deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.03) 42%, rgba(255,255,255,0.12) 100%)",
               }}
             />
           ) : null}

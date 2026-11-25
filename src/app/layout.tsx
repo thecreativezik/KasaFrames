@@ -1,20 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Syne } from "next/font/google";
+import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { AnalyticsScripts } from "@/components/analytics-scripts";
 
-const inter = Inter({
+// One grotesk for everything, set large at regular weight with tight tracking.
+const grotesk = Hanken_Grotesk({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const syne = Syne({
-  subsets: ["latin"],
-  variable: "--font-syne",
+  variable: "--font-grotesk",
   display: "swap",
 });
 
@@ -45,19 +40,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f4ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  themeColor: "#0a0a0a",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${syne.variable} min-h-dvh font-sans`}>
+    // Dark-only: the class is fixed, so every `dark:` style always applies.
+    <html lang="en" className="dark">
+      <body className={`${grotesk.variable} min-h-dvh font-sans`}>
         <AppProviders>
           <AnalyticsScripts />
-          <div className="relative flex min-h-dvh flex-col">
+          <div id="top" className="relative flex min-h-dvh flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>
             <SiteFooter />

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProduct, products } from "@/lib/data/catalog";
+import { getCollection, getProduct, products } from "@/lib/data/catalog";
 import { ProductConfigurator } from "@/components/product/product-configurator";
 import { formatGhs } from "@/lib/utils";
 
@@ -22,69 +22,101 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = getProduct(slug);
   if (!product) notFound();
+  const collection = getCollection(product.collection);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+    <div className="shell pb-24 pt-12 lg:pb-36 lg:pt-16">
+      {collection ? (
+        <Link
+          href={`/collections/${collection.slug}`}
+          className="mb-6 inline-flex min-h-11 items-center text-[13px] text-bone/60 transition-colors hover:text-bone"
+        >
+          ← {collection.title}
+        </Link>
+      ) : null}
+
       <ProductConfigurator product={product} />
 
-      <section className="mt-16 border-t border-kasa-black/10 pt-12 dark:border-white/10">
-        <h2 className="font-display text-2xl font-semibold">Every size, every price</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          The full list, so you can work out the cost before you talk to us. Installation is a flat{" "}
-          {formatGhs(product.installationGhs)} per frame and is optional.
-        </p>
-
-        <div className="mt-6 overflow-x-auto rounded-[2rem] border border-kasa-black/10 dark:border-white/10">
-          <table className="w-full min-w-[30rem] text-left text-sm">
-            <thead className="bg-kasa-black/5 text-xs uppercase tracking-wider text-kasa-muted dark:bg-white/5">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Size (inches)</th>
-                <th className="px-5 py-3 text-right font-semibold">Frame</th>
-                <th className="px-5 py-3 text-right font-semibold">Installation</th>
-                <th className="px-5 py-3 text-right font-semibold">Total per frame</th>
-              </tr>
-            </thead>
-            <tbody>
-              {product.sizes.map((size) => (
-                <tr key={size.label} className="border-t border-kasa-black/5 dark:border-white/5">
-                  <td className="px-5 py-3 font-medium">{size.label}</td>
-                  <td className="px-5 py-3 text-right">{formatGhs(size.frameGhs)}</td>
-                  <td className="px-5 py-3 text-right text-kasa-muted">{formatGhs(product.installationGhs)}</td>
-                  <td className="px-5 py-3 text-right font-semibold">
-                    {formatGhs(size.frameGhs + product.installationGhs)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="mt-24 grid grid-cols-1 gap-10 border-t border-bone/10 pt-14 lg:mt-32 lg:grid-cols-12 lg:gap-10">
+        <div className="lg:col-span-4">
+          <h2 className="text-display-sm text-balance">Every size, every price.</h2>
+          <p className="mt-5 text-[15px] leading-relaxed text-bone/60 text-pretty">
+            The full list, so you can work out the cost before you talk to us. Installation is a flat{" "}
+            {formatGhs(product.installationGhs)} per frame and is optional.
+          </p>
         </div>
 
-        <p className="mt-4 text-xs text-kasa-muted dark:text-kasa-sand/70">
-          A 50% deposit confirms the order. Custom sizes are possible—ask and we will quote before anything is made.{" "}
-          <Link href="/policies" className="underline underline-offset-2">
-            How we work
-          </Link>
-        </p>
+        <div className="min-w-0 lg:col-span-8">
+          <div className="overflow-x-auto [scrollbar-width:thin]">
+            <table className="w-full min-w-[32rem] text-left text-[15px]">
+              <thead className="text-[13px] text-bone/50">
+                <tr className="border-b border-bone/15">
+                  <th scope="col" className="py-3 pr-4 font-normal">
+                    Size (inches)
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-normal">
+                    Frame
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-normal">
+                    Installation
+                  </th>
+                  <th scope="col" className="py-3 pl-4 text-right font-normal">
+                    Total per frame
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {product.sizes.map((size) => (
+                  <tr key={size.label} className="border-b border-bone/10">
+                    <th scope="row" className="py-4 pr-4 font-normal text-bone">
+                      {size.label}
+                    </th>
+                    <td className="px-4 py-4 text-right text-bone/70">{formatGhs(size.frameGhs)}</td>
+                    <td className="px-4 py-4 text-right text-bone/50">{formatGhs(product.installationGhs)}</td>
+                    <td className="py-4 pl-4 text-right text-bone">
+                      {formatGhs(size.frameGhs + product.installationGhs)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-5 max-w-[62ch] text-[13px] leading-relaxed text-bone/50">
+            A 50% deposit confirms the order. Custom sizes are possible: ask and we will quote before anything is
+            made.{" "}
+            <Link href="/policies" className="text-bone/70 underline underline-offset-4 hover:text-bone">
+              How we work
+            </Link>
+          </p>
+        </div>
       </section>
 
-      <section className="mt-16 grid gap-6 border-t border-kasa-black/10 pt-12 dark:border-white/10 lg:grid-cols-2">
-        <div>
-          <h2 className="font-display text-2xl font-semibold">Details</h2>
-          <p className="mt-4 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{product.longDescription}</p>
+      <section className="mt-20 grid grid-cols-1 gap-12 border-t border-bone/10 pt-14 lg:mt-28 lg:grid-cols-12 lg:gap-10">
+        <div className="lg:col-span-4">
+          <h2 className="text-display-sm">About this frame</h2>
         </div>
-        <div>
-          <h3 className="font-display text-xl font-semibold">Highlights</h3>
-          <ul className="mt-4 space-y-2 text-sm text-kasa-muted dark:text-kasa-sand/80">
-            {product.highlights.map((h) => (
-              <li key={h}>— {h}</li>
-            ))}
-          </ul>
-          <h3 className="mt-8 font-display text-xl font-semibold">Ideal for</h3>
-          <ul className="mt-4 space-y-2 text-sm text-kasa-muted dark:text-kasa-sand/80">
-            {product.idealFor.map((h) => (
-              <li key={h}>— {h}</li>
-            ))}
-          </ul>
+        <div className="grid gap-12 lg:col-span-8 lg:grid-cols-2 lg:gap-10">
+          <p className="max-w-[60ch] text-lead font-light text-bone/70 text-pretty lg:col-span-2">{product.longDescription}</p>
+          <div>
+            <h2 className="text-title">Highlights</h2>
+            <ul className="mt-5 border-t border-bone/10 text-[15px] text-bone/60">
+              {product.highlights.map((h) => (
+                <li key={h} className="border-b border-bone/10 py-3">
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-title">Ideal for</h2>
+            <ul className="mt-5 border-t border-bone/10 text-[15px] text-bone/60">
+              {product.idealFor.map((h) => (
+                <li key={h} className="border-b border-bone/10 py-3">
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
     </div>
