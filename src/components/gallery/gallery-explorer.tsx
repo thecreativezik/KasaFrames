@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/motion/reveal";
+import { GalleryImage } from "@/components/gallery/gallery-image";
 import {
   familyLabel,
   familyMeta,
@@ -14,7 +14,7 @@ import {
   type FinishFamily,
   type GalleryItem,
 } from "@/lib/data/gallery";
-import { whatsappLink } from "@/lib/utils";
+import { cn, whatsappLink } from "@/lib/utils";
 import { MessageCircle, Search, X } from "lucide-react";
 
 type Filter = FinishFamily | "all";
@@ -44,59 +44,80 @@ export function GalleryExplorer({ items }: { items: GalleryItem[] }) {
     });
   }, [filter, items, q]);
 
+  // Home links here as /gallery?finish=<family>. Read it once on mount, and keep
+  // the address in step with the chips so a filtered view can be shared.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("finish");
+    if (wanted && families.some((f) => f.key === wanted)) setFilter(wanted as FinishFamily);
+  }, [families]);
+
+  function chooseFilter(next: Filter) {
+    setFilter(next);
+    const url = new URL(window.location.href);
+    if (next === "all") url.searchParams.delete("finish");
+    else url.searchParams.set("finish", next);
+    window.history.replaceState(null, "", url);
+  }
+
   const activeMeta = filter === "all" ? null : familyMeta(filter);
 
   return (
     <div>
-      <div className="flex flex-col gap-5">
-        <div className="relative max-w-xl">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-kasa-muted" />
+      <div className="grid gap-8 border-t border-bone/10 pt-8 lg:grid-cols-12 lg:items-start lg:gap-10">
+        <div className="relative lg:col-span-3">
+          <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-bone/50" />
           <Input
+            type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search a finish, a room, a size…"
-            className="pl-11"
+            className="pl-7"
             aria-label="Search the gallery"
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+        <div className="flex flex-wrap gap-2 lg:col-span-9 lg:justify-end" role="group" aria-label="Filter by finish">
+          <FilterChip active={filter === "all"} onClick={() => chooseFilter("all")} count={items.length}>
             All work
-            <span className="ml-2 text-[10px] opacity-60">{items.length}</span>
           </FilterChip>
 
           {families.map((f) => {
             const count = items.filter((i) => i.family === f.key).length;
             return (
-              <FilterChip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
+              <FilterChip key={f.key} active={filter === f.key} onClick={() => chooseFilter(f.key)} count={count}>
                 {f.label}
-                <span className="ml-2 text-[10px] opacity-60">{count}</span>
               </FilterChip>
             );
           })}
         </div>
-
-        {activeMeta ? (
-          <p className="max-w-2xl text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-            <span className="font-medium text-kasa-black dark:text-kasa-cream">{activeMeta.tagline}.</span>{" "}
-            {activeMeta.description}
-          </p>
-        ) : null}
       </div>
 
+      <p aria-live="polite" className="mt-8 max-w-2xl text-[15px] leading-relaxed text-bone/60 text-pretty">
+        {activeMeta ? (
+          <>
+            <span className="text-bone">{activeMeta.tagline}.</span> {activeMeta.description}
+          </>
+        ) : (
+          <span className="text-bone/50">
+            {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}
+            {q.trim() ? ` matching “${q.trim()}”` : ""}
+          </span>
+        )}
+      </p>
+
       {filtered.length === 0 ? (
-        <div className="mt-16 rounded-[2rem] border border-dashed border-kasa-black/15 p-12 text-center dark:border-white/15">
-          <p className="font-display text-xl font-semibold">Nothing matches that yet.</p>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-kasa-muted dark:text-kasa-sand/80">
-            Try a finish—canvas, matte, photo block—or clear the search and browse the whole archive.
+        <div className="mt-12 rounded-panel border border-dashed border-bone/15 px-6 py-16 text-center">
+          <p className="text-title">Nothing matches that yet.</p>
+          <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-bone/60">
+            Try a finish, like canvas, matte or photo block, or clear the search and browse everything.
           </p>
           <Button
-            variant="outline"
-            className="mt-6"
+            variant="secondary"
+            size="lg"
+            className="mt-8"
             onClick={() => {
               setQ("");
-              setFilter("all");
+              chooseFilter("all");
             }}
           >
             Clear filters
@@ -105,30 +126,27 @@ export function GalleryExplorer({ items }: { items: GalleryItem[] }) {
       ) : (
         <div className="mt-10 columns-1 gap-5 sm:columns-2 lg:columns-3">
           {filtered.map((item, idx) => (
-            <Reveal key={item.id} delay={(idx % 6) * 0.04} className="mb-5 break-inside-avoid">
+            <Reveal key={item.id} delay={(idx % 6) * 0.04} className="mb-12 break-inside-avoid">
               <button
                 type="button"
                 onClick={() => setOpen(item)}
-                className="group block w-full overflow-hidden rounded-[2rem] border border-kasa-black/10 bg-kasa-black text-left transition hover:border-kasa-gold/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-kasa-gold dark:border-white/10"
+                className="group block w-full rounded-tile text-left"
+                aria-haspopup="dialog"
               >
-                <div className="relative w-full" style={{ aspectRatio: item.ratio }}>
+                <div className="relative w-full overflow-hidden rounded-tile bg-ink-raised" style={{ aspectRatio: item.ratio }}>
                   <GalleryImage
                     item={item}
-                    className="object-cover transition duration-700 group-hover:scale-[1.03]"
+                    className="object-cover"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-kasa-black via-kasa-black/20 to-transparent opacity-90" />
-
-                  <div className="absolute inset-x-0 bottom-0 p-6 text-kasa-cream">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-kasa-gold">
-                      {familyLabel(item.family)}
-                    </p>
-                    <p className="mt-2 font-display text-lg font-semibold leading-snug">{item.title}</p>
-                    <p className="mt-1 text-xs text-kasa-sand/80">
-                      {item.room} · {item.sizes}
-                    </p>
-                  </div>
                 </div>
+                <div className="mt-4 flex items-baseline justify-between gap-4">
+                  <p className="min-w-0 text-[15px] leading-snug text-bone decoration-bone/30 underline-offset-4 group-hover:underline">{item.title}</p>
+                  <p className="shrink-0 text-[12px] text-bone/50">{familyLabel(item.family)}</p>
+                </div>
+                <p className="mt-1 text-[13px] text-bone/50">
+                  {item.room} · {item.sizes}
+                </p>
               </button>
             </Reveal>
           ))}
@@ -138,51 +156,47 @@ export function GalleryExplorer({ items }: { items: GalleryItem[] }) {
       <Dialog open={open !== null} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent showClose={false} className="max-w-5xl overflow-hidden p-0">
           {open ? (
-            <div className="grid max-h-[85vh] gap-0 overflow-y-auto md:grid-cols-5">
-              <div className="relative md:col-span-3">
-                <div className="relative w-full bg-kasa-black" style={{ aspectRatio: open.ratio }}>
+            <div className="grid max-h-[88dvh] gap-0 overflow-y-auto [scrollbar-width:thin] md:grid-cols-5">
+              <div className="relative bg-ink md:col-span-3">
+                <div className="relative w-full" style={{ aspectRatio: open.ratio }}>
                   <GalleryImage item={open} className="object-cover" sizes="(max-width: 768px) 100vw, 60vw" />
                 </div>
               </div>
 
-              <div className="flex flex-col p-8 md:col-span-2">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-kasa-gold">
-                    {familyLabel(open.family)}
-                  </p>
+              <div className="flex flex-col p-6 sm:p-8 md:col-span-2">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-[13px] text-bone/50">{familyLabel(open.family)}</p>
                   <button
                     type="button"
                     onClick={() => setOpen(null)}
                     aria-label="Close"
-                    className="rounded-full p-1 text-kasa-muted transition hover:bg-kasa-black/5 dark:hover:bg-white/10"
+                    className="-mr-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-bone/60 transition-[background-color,color,transform] hover:bg-bone/10 hover:text-bone active:scale-[0.95]"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                <DialogTitle className="mt-3 font-display text-2xl font-semibold">{open.title}</DialogTitle>
-                <p className="mt-4 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{open.blurb}</p>
+                <DialogTitle className="mt-4 text-title text-balance">{open.title}</DialogTitle>
+                <p className="mt-4 text-[15px] leading-relaxed text-bone/60 text-pretty">{open.blurb}</p>
 
-                <dl className="mt-6 grid gap-3 text-sm">
-                  <div className="flex justify-between gap-4 border-b border-kasa-black/10 pb-2 dark:border-white/10">
-                    <dt className="text-kasa-muted dark:text-kasa-sand/70">Space</dt>
-                    <dd className="text-right font-medium">{open.room}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4 border-b border-kasa-black/10 pb-2 dark:border-white/10">
-                    <dt className="text-kasa-muted dark:text-kasa-sand/70">Sizes</dt>
-                    <dd className="text-right font-medium">{open.sizes}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-kasa-muted dark:text-kasa-sand/70">Finish</dt>
-                    <dd className="text-right font-medium">{familyMeta(open.family)?.tagline}</dd>
-                  </div>
+                <dl className="mt-8 grid border-t border-bone/10 text-[14px]">
+                  {[
+                    ["Space", open.room],
+                    ["Sizes", open.sizes],
+                    ["Finish", familyMeta(open.family)?.tagline],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-baseline justify-between gap-4 border-b border-bone/10 py-3">
+                      <dt className="text-bone/50">{k}</dt>
+                      <dd className="min-w-0 text-right text-bone">{v}</dd>
+                    </div>
+                  ))}
                 </dl>
 
                 <div className="mt-8 grid gap-2">
-                  <Button asChild>
+                  <Button asChild size="lg">
                     <Link href="/visualizer">See it on your wall</Link>
                   </Button>
-                  <Button asChild variant="secondary">
+                  <Button asChild size="lg" variant="secondary">
                     <a
                       href={whatsappLink(
                         `Hello KasaFrames — I'd like something like "${open.title}" (${familyLabel(open.family)}).`,
@@ -190,11 +204,11 @@ export function GalleryExplorer({ items }: { items: GalleryItem[] }) {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <MessageCircle className="h-4 w-4" />
+                      <MessageCircle />
                       Ask about this look
                     </a>
                   </Button>
-                  <Button asChild variant="outline">
+                  <Button asChild size="lg" variant="ghost">
                     <Link href="/book">Book a consultation</Link>
                   </Button>
                 </div>
@@ -207,37 +221,15 @@ export function GalleryExplorer({ items }: { items: GalleryItem[] }) {
   );
 }
 
-/**
- * next/image refuses SVG unless the optimizer is told to allow it, which is a
- * setting worth avoiding site-wide. Our own vector artwork is served directly
- * instead—it is already a few tens of KB and needs no resizing.
- */
-function GalleryImage({
-  item,
-  className,
-  sizes,
-}: {
-  item: GalleryItem;
-  className: string;
-  sizes: string;
-}) {
-  if (item.image.toLowerCase().endsWith(".svg")) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.image} alt={item.title} className={`absolute inset-0 h-full w-full ${className}`} />
-    );
-  }
-
-  return <Image src={item.image} alt={item.title} fill className={className} sizes={sizes} />;
-}
-
 function FilterChip({
   active,
   onClick,
+  count,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  count: number;
   children: React.ReactNode;
 }) {
   return (
@@ -245,13 +237,15 @@ function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+      className={cn(
+        "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-[14px] transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.97]",
         active
-          ? "bg-kasa-black text-kasa-cream dark:bg-kasa-cream dark:text-kasa-black"
-          : "bg-kasa-black/5 hover:bg-kasa-black/10 dark:bg-white/10 dark:hover:bg-white/15"
-      }`}
+          ? "border-bone bg-bone text-ink"
+          : "border-bone/15 text-bone/70 hover:border-bone/40 hover:text-bone",
+      )}
     >
       {children}
+      <span className={cn("text-[12px] tabular-nums", active ? "text-ink/60" : "text-bone/50")}>{count}</span>
     </button>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GalleryExplorer } from "@/components/gallery/gallery-explorer";
 import { loadGalleryItems } from "@/lib/data/media";
+import { PageIntro } from "@/components/layout/page-intro";
 
 export const metadata: Metadata = {
   title: "Portfolio gallery",
@@ -13,19 +14,12 @@ export default function GalleryPage() {
   const items = loadGalleryItems();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Portfolio</p>
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-          Walls that read like editorial spreads.
-        </h1>
-        <p className="mt-5 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          Filter by finish—acrylic gloss, matte framed, canvas wrap, photo block—or by the kind of wall you are
-          planning. Tap any piece for the sizes and spacing behind it.
-        </p>
-      </header>
+    <div className="shell pb-24 pt-16 lg:pb-32 lg:pt-24">
+      <PageIntro title="Walls that read like editorial spreads.">
+        Filter by finish—acrylic gloss, matte framed, canvas wrap, photo block—or by the kind of wall you are planning. Tap any piece for the sizes and spacing behind it.
+      </PageIntro>
 
-      <div className="mt-12">
+      <div className="mt-16 lg:mt-20">
         <GalleryExplorer items={items} />
       </div>
     </div>

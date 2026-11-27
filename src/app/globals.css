@@ -4,40 +4,98 @@
 @tailwind components;
 /* stylelint-disable-next-line */
 @tailwind utilities;
-/* stylelint-disable-next-line */
 
+/* The site is dark-only. Nothing here reads prefers-color-scheme. */
 :root {
-  color-scheme: light;
-}
-
-.dark {
   color-scheme: dark;
 }
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 242, 237, 0.18) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 @layer base {
   body {
-    @apply bg-kasa-cream text-kasa-black antialiased;
-    background-image: theme('backgroundImage.grain-light');
+    @apply bg-ink text-bone antialiased;
+    font-feature-settings: "ss01", "cv11";
+    caret-color: theme("colors.bone.DEFAULT");
   }
 
-  .dark body {
-    @apply bg-kasa-black text-kasa-cream;
-    background-image: theme('backgroundImage.grain-dark');
+  ::selection {
+    background-color: rgba(201, 169, 98, 0.35);
+    color: theme("colors.bone.DEFAULT");
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(244, 242, 237, 0.7);
+    outline-offset: 3px;
+  }
+
+  /* Replace the default ▶ marker on disclosure widgets. */
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(244, 242, 237, 0.16);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(244, 242, 237, 0.3);
   }
 }
 
-::selection {
-  background-color: rgba(234, 179, 8, 0.3);
-  color: #000;
+@layer components {
+  /*
+   * The footer's full-width wordmark. 4.952em is the ink width of
+   * "KasaFrames" in Hanken Grotesk at -0.045em, and 0.079em the K's left
+   * bearing, so the letters themselves span the container edge to edge.
+   * The vertical margins trim the line box to the cap height.
+   */
+  .wordmark-fit {
+    container-type: inline-size;
+  }
+  .wordmark-fit span {
+    display: block;
+    white-space: nowrap;
+    font-weight: 400;
+    font-size: 19vw;
+    font-size: calc(100cqi / 4.96);
+    letter-spacing: -0.045em;
+    line-height: 1;
+    margin: -0.15em 0 -0.14em -0.079em;
+  }
+
+  /* Page and section gutters shared by every layout. */
+  .shell {
+    @apply mx-auto w-full max-w-[90rem] px-5 sm:px-8 lg:px-14;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
   }
 }
 
@@ -47,4 +105,338 @@ html {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Overlays. Radix keeps an element mounted until its exit animation  */
+/* ends, so every open and close below plays in full.                 */
+/* ------------------------------------------------------------------ */
+
+/* The menu drops like a curtain and lifts away again. */
+.menu-curtain[data-state="open"] {
+  animation: curtain-in 0.75s cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+.menu-curtain[data-state="closed"] {
+  animation: curtain-out 0.55s cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+.menu-curtain[data-state="open"] .menu-rise {
+  animation: menu-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.28s + var(--i, 0) * 0.055s);
+}
+.menu-curtain[data-state="open"] .menu-fade {
+  animation: menu-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+
+/* The cart slides in from the right over a dimmed page. */
+.sheet[data-state="open"] {
+  animation: sheet-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sheet[data-state="closed"] {
+  animation: sheet-out 0.32s cubic-bezier(0.4, 0, 1, 1) both;
+}
+.scrim[data-state="open"] {
+  animation: fade-in 0.4s ease-out both;
+}
+.scrim[data-state="closed"] {
+  animation: fade-out 0.32s ease-in both;
+}
+
+@keyframes curtain-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes curtain-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+@keyframes menu-rise {
+  from {
+    transform: translateY(108%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes menu-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes sheet-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-curtain[data-state="open"],
+  .sheet[data-state="open"] {
+    animation: fade-in 0.2s ease-out both;
+  }
+  .menu-curtain[data-state="closed"],
+  .sheet[data-state="closed"] {
+    animation: fade-out 0.15s ease-in both;
+  }
+  .menu-curtain .menu-rise,
+  .menu-curtain .menu-fade {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Range sliders: a 2px track filled in bone up to the value, and a   */
+/* round thumb. The input is 44px tall so it is easy to grab.         */
+/* ------------------------------------------------------------------ */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+}
+.range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    theme("colors.bone.DEFAULT") var(--fill, 0%),
+    rgba(244, 242, 237, 0.16) var(--fill, 0%)
+  );
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 999px;
+  background: theme("colors.bone.DEFAULT");
+  box-shadow: 0 0 0 4px theme("colors.ink.raised");
+  transition: transform 0.15s ease-out;
+}
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.range::-moz-range-track {
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(244, 242, 237, 0.16);
+}
+.range::-moz-range-progress {
+  height: 2px;
+  border-radius: 2px;
+  background: theme("colors.bone.DEFAULT");
+}
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: theme("colors.bone.DEFAULT");
+}
+.range:focus-visible {
+  outline: none;
+}
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px theme("colors.ink.raised"),
+    0 0 0 6px rgba(244, 242, 237, 0.7);
+}
+.range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* ------------------------------------------------------------------ */
+/* Home: the opening. The headline rises line by line from behind a   */
+/* mask; the padding keeps ascenders and descenders inside it.         */
+/* ------------------------------------------------------------------ */
+.hero-line {
+  display: block;
+  overflow: hidden;
+  padding-block: 0.12em;
+  margin-block: -0.12em;
+}
+.hero-line > span {
+  display: block;
+  animation: hero-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+.hero-fade {
+  animation: hero-fade 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+.hero-drop {
+  animation: fade-in 0.2s ease-out both;
+}
+@keyframes hero-rise {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Home: the opening wall. A phone or tablet scales it up and scrolls  */
+/* it sideways. From lg the whole wall fits: one unit is 1vw, or less  */
+/* on a short screen, so the wall and its caption stay in the first    */
+/* view. --tall is the tallest piece in units; the rem figure is what  */
+/* the header, headline, buttons and caption take up at that width.    */
+/* It never drops below 0.7vw: on a very short laptop screen the       */
+/* caption sits just under the fold rather than the work shrinking.    */
+/* The line draws across, each piece is hung onto it, then the lights  */
+/* come up piece by piece.                                             */
+/* ------------------------------------------------------------------ */
+.hang {
+  --u: 2.8vw;
+}
+@media (min-width: 768px) {
+  .hang {
+    --u: 2vw;
+  }
+}
+@media (min-width: 1024px) {
+  .hang {
+    --u: max(0.7vw, min(1vw, calc((100svh - 40.5rem) / var(--tall, 20))));
+  }
+}
+@media (min-width: 1280px) {
+  .hang {
+    --u: max(0.7vw, min(1vw, calc((100svh - 38rem) / var(--tall, 20))));
+  }
+}
+.hang-line {
+  transform-origin: left center;
+  animation: hang-line 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+.hang-tick {
+  animation: fade-in 0.5s ease-out 0.15s both;
+}
+.hang-in {
+  transform-origin: 50% 0;
+  animation: hang-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.35s + var(--i, 0) * 0.09s);
+}
+.hang-lamp {
+  opacity: 0;
+  animation: lamp-on 1.2s ease-out both;
+  animation-delay: calc(0.95s + var(--i, 0) * 0.1s);
+}
+.hang-glow {
+  opacity: 0;
+}
+.hang-glow[data-on] {
+  animation: fade-in 1.6s ease-out 0.7s both;
+}
+.hang-label {
+  animation: fade-in 0.45s ease-out both;
+}
+@keyframes lamp-on {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes hang-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes hang-in {
+  from {
+    opacity: 0;
+    transform: translateY(-26px) rotate(-1.6deg);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-line > span,
+  .hero-fade,
+  .hero-drop,
+  .hang-line,
+  .hang-tick,
+  .hang-in,
+  .hang-lamp,
+  .hang-label {
+    animation: none;
+  }
+  .hang-glow[data-on] {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Home: the wall story. Text that changes with the chapter fades in.  */
+/* ------------------------------------------------------------------ */
+.story-swap {
+  animation: fade-in 0.45s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-swap {
+    animation: none;
+  }
 }

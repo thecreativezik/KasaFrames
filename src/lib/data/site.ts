@@ -38,18 +38,18 @@ export const faqs = [
   },
   {
     q: "Can you work with my existing art?",
-    a: "We frame prints, photographs and posters. If you have a valuable original or a textile, tell us first — those sometimes need conservation framing, which is a specialist trade, and we would rather point you to the right person than risk the piece.",
+    a: "We frame prints, photographs and posters. If you have a valuable original or a textile, tell us first: those sometimes need conservation framing, which is a specialist trade, and we would rather point you to the right person than risk the piece.",
   },
   {
     q: "Do you deliver across Accra?",
-    a: "We deliver and install across Greater Accra. Outside Accra, ask us — we will quote the delivery honestly rather than promise a service we cannot run well.",
+    a: "We deliver and install across Greater Accra. Outside Accra, ask us, and we will quote the delivery honestly rather than promise a service we cannot run well.",
   },
 ];
 
 export const processSteps = [
   {
     title: "Consult",
-    body: "We study your wall, light, and lifestyle—then propose a composition that suits the room rather than fighting it.",
+    body: "We study your wall, light, and lifestyle, then propose a composition that suits the room rather than fighting it.",
   },
   {
     title: "Curate",

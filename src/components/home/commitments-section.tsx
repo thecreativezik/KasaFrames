@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { commitments } from "@/lib/data/site";
 import { Reveal } from "@/components/motion/reveal";
+import { Button } from "@/components/ui/button";
 
 /**
  * Replaces the invented customer quotes that used to sit here. Until there are
@@ -10,40 +9,29 @@ import { Reveal } from "@/components/motion/reveal";
  */
 export function CommitmentsSection() {
   return (
-    <section className="border-y border-kasa-black/10 bg-kasa-sand/25 py-16 dark:border-white/10 dark:bg-white/[0.04] sm:py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Our promise</p>
-          <h2 className="mt-4 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl text-balance">
-            No surprises at the door.
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-            What you pay, when you pay it, and who turns up. All of it is on the site before you commit to anything.
-          </p>
-        </Reveal>
-
-        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          {commitments.map((c, i) => (
-            <Reveal
-              key={c.title}
-              delay={i * 0.06}
-              className="rounded-[1.75rem] border border-kasa-black/10 bg-kasa-cream p-6 dark:border-white/10 dark:bg-kasa-charcoal sm:rounded-[2rem] sm:p-8"
-            >
-              <p className="font-display text-lg font-semibold">{c.title}</p>
-              <p className="mt-3 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">{c.body}</p>
-            </Reveal>
-          ))}
-        </div>
-
-        <Reveal className="mt-8">
-          <Link
-            href="/policies"
-            className="text-sm font-medium underline-offset-4 hover:underline dark:text-kasa-cream"
-          >
-            Read how we work, in full →
-          </Link>
-        </Reveal>
+    <section aria-labelledby="commitments-title" className="shell grid gap-12 py-24 lg:grid-cols-12 lg:gap-10 lg:py-36">
+      <div className="lg:col-span-5">
+        <h2 id="commitments-title" className="text-display-md text-balance">
+          No surprises at the door.
+        </h2>
+        <p className="mt-6 max-w-md text-lead font-light text-bone/60 text-pretty">
+          What you pay, when you pay it, and who turns up. All of it is on the site before you commit to anything.
+        </p>
+        <Button asChild variant="link" className="mt-8 text-[15px]">
+          <Link href="/policies">Read how we work, in full</Link>
+        </Button>
       </div>
+
+      <ul className="grid border-b border-bone/10 sm:grid-cols-2 sm:gap-x-10 lg:col-span-7">
+        {commitments.map((c, i) => (
+          <li key={c.title} className="border-t border-bone/10 py-8 lg:py-10">
+            <Reveal delay={(i % 2) * 0.06}>
+              <h3 className="text-title text-balance">{c.title}</h3>
+              <p className="mt-3 max-w-md text-[15px] leading-relaxed text-bone/60 text-pretty">{c.body}</p>
+            </Reveal>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

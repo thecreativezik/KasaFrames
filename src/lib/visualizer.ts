@@ -72,6 +72,81 @@ export const SCALE_REFERENCES: ScaleReference[] = [
  */
 export const EYE_LEVEL_CM = 145;
 
+export interface SampleRoom {
+  id: string;
+  label: string;
+  src: string;
+  /** Width of the marked wall in cm, measured off the furniture—never guessed. */
+  wallCm: number;
+  /**
+   * Height of the same wall. The corners imply it, but stating it stops the
+   * first render using a height carried over from the room before this one.
+   */
+  wallHeightCm: number;
+  /**
+   * The wall in the photo, bottom edge on the skirting. Everything is hung
+   * against this, so a piece's height above the floor is a real number.
+   */
+  quad: Quad;
+  /** What we put the tape to, shown to the customer so the scale is checkable. */
+  measuredAgainst: string;
+}
+
+/**
+ * The sample rooms, each one calibrated rather than estimated.
+ *
+ * A frame is drawn at cm per pixel, so the whole illusion rests on how wide the
+ * wall really is. These three were measured against furniture of known size—a
+ * sofa, a sideboard—which is why a 20 × 30 in print lands at the size it would
+ * actually be in the room instead of a third too big.
+ */
+export const SAMPLE_ROOMS: SampleRoom[] = [
+  {
+    id: "lilac-lounge",
+    label: "Lilac corner",
+    src: "/media/rooms/lilac-lounge.jpg",
+    wallCm: 310,
+    wallHeightCm: 554,
+    // A real corner, so the wall recedes: the right-hand edge is the corner
+    // itself, traced along the cornice above and the skirting below.
+    quad: [
+      { x: 0, y: 0 },
+      { x: 0.657, y: 0.169 },
+      { x: 0.657, y: 0.817 },
+      { x: 0, y: 0.851 },
+    ],
+    measuredAgainst: "the 200 cm sofa against it",
+  },
+  {
+    id: "loft-sofa",
+    label: "Loft lounge",
+    src: "/media/rooms/loft-sofa.jpg",
+    wallCm: 595,
+    wallHeightCm: 319,
+    quad: [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 0.951 },
+      { x: 0, y: 0.951 },
+    ],
+    measuredAgainst: "the 230 cm sofa in front of it",
+  },
+  {
+    id: "warm-sideboard",
+    label: "Warm sideboard",
+    src: "/media/rooms/warm-sideboard.jpg",
+    wallCm: 403,
+    wallHeightCm: 216,
+    quad: [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 0.951 },
+      { x: 0, y: 0.951 },
+    ],
+    measuredAgainst: "the 155 cm sideboard below it",
+  },
+];
+
 /**
  * Wall coordinates run 0 at the top of the wall to 100 at the floor, so a
  * height above the floor is the complement. Both helpers assume the wall plane

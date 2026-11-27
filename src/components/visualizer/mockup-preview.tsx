@@ -23,14 +23,14 @@ export function MockupPreview() {
   }, []);
 
   if (!loaded) {
-    return <div className="h-64 animate-pulse rounded-[2rem] bg-kasa-black/5 dark:bg-white/5" />;
+    return <div className="h-64 animate-pulse rounded-panel bg-bone/[0.04]" />;
   }
 
   if (!composition || composition.pieces.length === 0) {
     return (
-      <div className="rounded-[2rem] border border-dashed border-kasa-black/15 p-12 text-center dark:border-white/15">
-        <p className="font-display text-xl font-semibold">Nothing to preview yet.</p>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-kasa-muted dark:text-kasa-sand/80">
+      <div className="rounded-panel border border-dashed border-bone/15 p-12 text-center">
+        <p className="text-[1.375rem] tracking-[-0.035em]">Nothing to preview yet.</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-bone/60">
           Compose a wall in the visualizer and it will appear here, at full size, before you commit to anything.
         </p>
         <Button asChild className="mt-6">
@@ -82,14 +82,14 @@ export function MockupPreview() {
           pieces={composition.pieces}
         />
 
-        <p className="mt-4 text-xs text-kasa-muted dark:text-kasa-sand/70">
+        <p className="mt-4 text-xs text-bone/50">
           Drawn to scale against a {composition.wallCm} × {composition.wallHeightCm ?? 280} cm wall, so every piece is
           the size it will be. This preview stays on the site—send it to the studio and we will work from it with you.
         </p>
 
-        <div className="mt-6 overflow-x-auto rounded-[2rem] border border-kasa-black/10 dark:border-white/10">
+        <div className="mt-6 overflow-x-auto rounded-panel border border-bone/10">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="bg-kasa-black/5 text-xs uppercase tracking-wider text-kasa-muted dark:bg-white/5">
+            <thead className="text-[13px] text-bone/50">
               <tr>
                 <th className="px-4 py-3 font-semibold">Piece</th>
                 <th className="px-4 py-3 font-semibold">Size</th>
@@ -102,14 +102,14 @@ export function MockupPreview() {
               {cost.lines.map((line) => {
                 const { wCm, hCm } = pieceCm(line.piece);
                 return (
-                  <tr key={line.piece.id} className="border-t border-kasa-black/5 dark:border-white/5">
+                  <tr key={line.piece.id} className="border-t border-bone/10">
                     <td className="px-4 py-3">{line.name}</td>
-                    <td className="px-4 py-3 text-kasa-muted">{line.piece.sizeLabel} in</td>
-                    <td className="px-4 py-3 text-kasa-muted">
+                    <td className="px-4 py-3 text-bone/50">{line.piece.sizeLabel} in</td>
+                    <td className="px-4 py-3 text-bone/50">
                       {Math.round(wCm)} × {Math.round(hCm)} cm
                       {Math.round(line.piece.rotation) !== 0 ? ` · ${Math.round(line.piece.rotation)}°` : ""}
                     </td>
-                    <td className="px-4 py-3 text-kasa-muted">
+                    <td className="px-4 py-3 text-bone/50">
                       {Math.round(hangHeightCm(line.piece.yPct, composition.wallHeightCm ?? 280))} cm
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{formatGhs(line.totalGhs)}</td>
@@ -122,25 +122,25 @@ export function MockupPreview() {
       </div>
 
       <div className="mt-8 lg:mt-0 lg:col-span-4">
-        <div className="sticky top-24 rounded-[2rem] border border-kasa-black/10 bg-kasa-black p-6 text-kasa-cream dark:border-white/10">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Your estimate</p>
+        <div className="sticky top-24 rounded-panel border border-bone/10 bg-ink-raised p-6">
+          <h2 className="text-title">Your estimate</h2>
 
           <dl className="mt-5 grid gap-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-kasa-sand/80">
+              <dt className="text-bone/60">
                 Frames ({composition.pieces.length})
               </dt>
               <dd>{formatGhs(cost.framesGhs)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-kasa-sand/80">Installation</dt>
+              <dt className="text-bone/60">Installation</dt>
               <dd>{cost.installGhs > 0 ? formatGhs(cost.installGhs) : "Not included"}</dd>
             </div>
-            <div className="mt-2 flex justify-between border-t border-white/15 pt-3 text-base">
+            <div className="mt-2 flex justify-between border-t border-bone/15 pt-3 text-base">
               <dt className="font-medium">Total</dt>
-              <dd className="font-display text-2xl font-semibold">{formatGhs(cost.totalGhs)}</dd>
+              <dd className="text-title">{formatGhs(cost.totalGhs)}</dd>
             </div>
-            <div className="flex justify-between text-xs text-kasa-sand/70">
+            <div className="flex justify-between text-xs text-bone/50">
               <dt>50% deposit to begin</dt>
               <dd>{formatGhs(deposit)}</dd>
             </div>
@@ -165,7 +165,7 @@ export function MockupPreview() {
                 Send it to the studio
               </a>
             </Button>
-            <Button asChild variant="outline" className="w-full border-white/20 text-kasa-cream hover:bg-white/10">
+            <Button asChild variant="secondary" className="w-full">
               <Link href="/visualizer">
                 <ArrowLeft className="h-4 w-4" />
                 Back to editing
@@ -173,7 +173,7 @@ export function MockupPreview() {
             </Button>
           </div>
 
-          <p className="mt-5 text-[11px] leading-relaxed text-kasa-sand/60">
+          <p className="mt-5 text-[12px] leading-relaxed text-bone/50">
             Prices are from our published list. Transport for a site visit is charged at the Uber or Bolt fare and
             agreed with you before we travel. See{" "}
             <Link href="/policies" className="underline underline-offset-2">

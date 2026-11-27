@@ -101,7 +101,7 @@ export const collections: Collection[] = [
     heroImage: "/media/acrylic-gloss/gloss-portrait-size-guide.jpg",
     accent: "ring",
     stylingTips: [
-      "Gloss reads best on a wall that gets indirect light—direct sun turns it into a mirror.",
+      "Gloss reads best on a wall that gets indirect light. Direct sun turns it into a mirror.",
       "The ring border does the work of a frame without the bulk; keep the wall around it plain.",
       "Portraits gain most from gloss: skin tones stay warm and the blacks stay deep.",
     ],
@@ -117,7 +117,7 @@ export const collections: Collection[] = [
     heroImage: "/media/canvas-wrap/canvas-wrap-quartet.jpg",
     accent: "canvas",
     stylingTips: [
-      "Canvas takes the glare out of a bright room—it is the safest choice opposite a window.",
+      "Canvas takes the glare out of a bright room. It is the safest choice opposite a window.",
       "Go one size larger than feels comfortable; canvas without a frame reads smaller than it measures.",
       "The wrap carries the image around the sides, so leave a little breathing room at the edges of the artwork.",
     ],
@@ -133,7 +133,7 @@ export const collections: Collection[] = [
     heroImage: "/media/gallery-wall/corridor-portrait-grid.jpg",
     accent: "thick",
     stylingTips: [
-      "The white mat is what makes it look considered—never crop it out to save cost.",
+      "The white mat is what makes it look considered, so never crop it out to save cost.",
       "On a staircase, set out from the stair nosing, not the floor, so the line climbs true.",
       "Matching frames in a grid forgive almost any mix of images inside them.",
     ],
@@ -149,7 +149,7 @@ export const collections: Collection[] = [
     heroImage: "/media/photo-block/mounted-photo-panels.jpg",
     accent: "float",
     stylingTips: [
-      "The shadow gap is the whole effect—hang it where side light can find it.",
+      "The shadow gap is the whole effect: hang it where side light can find it.",
       "One float frame on a clean wall outperforms three of anything else.",
       "Keep surrounding decor minimal; the lift needs empty wall to read against.",
     ],
@@ -168,7 +168,7 @@ export const products: Product[] = [
     description:
       "A high-gloss printed photo or artwork mounted on board. Highly reflective, with vibrant, sharp colour.",
     longDescription:
-      "Comes two ways: plain, which is borderless with just the glossy print itself, or with ring—the same print carrying a thin decorative border in black or gold, which gives a framed finish without a traditional frame. It is the most popular and accessible type we offer, and the one families choose most often for portraits.",
+      "Comes two ways: plain, which is borderless with just the glossy print itself, or with ring: the same print carrying a thin decorative border in black or gold, which gives a framed finish without a traditional frame. It is the most popular and accessible type we offer, and the one families choose most often for portraits.",
     heroImage: "/media/acrylic-gloss/gloss-portrait-size-guide.jpg",
     gallery: ["/media/acrylic-gloss/gloss-quote-panels.jpg", "/media/acrylic-gloss/gloss-portrait-size-guide.jpg"],
     materials: ["gloss-board"],
@@ -239,7 +239,7 @@ export const products: Product[] = [
     tagline: "Bold black moulding, glass, and a white mat inside.",
     collection: "thick-edge-black",
     description:
-      "A chunky black border frame with glass and white matting—an inner white border between the frame and the photo.",
+      "A chunky black border frame with glass and white matting, an inner white border between the frame and the photo.",
     longDescription:
       "The thick edge gives it a strong, classic presence, and grouped together these frames create a powerful gallery wall. It is one of the most requested types for staircases in Accra, where a row of matching black frames ascending the wall makes a dramatic, intentional impression. The white mat adds breathing room around the image and lifts the whole finish.",
     heroImage: "/media/gallery-wall/corridor-portrait-grid.jpg",
@@ -282,7 +282,7 @@ export const products: Product[] = [
     description:
       "A minimal frame where the artwork sits inside with a small visible gap between the image and the thin border.",
     longDescription:
-      "The frame is engineered to sit slightly off the wall, casting a soft shadow behind it and giving the artwork a lifted, three-dimensional appearance—the popping effect. It is the most premium type we offer, and the one that turns a wall into a statement rather than a display.",
+      "The frame is engineered to sit slightly off the wall, casting a soft shadow behind it and giving the artwork a lifted, three-dimensional appearance. That is the popping effect. It is the most premium type we offer, and the one that turns a wall into a statement rather than a display.",
     heroImage: "/media/photo-block/mounted-photo-panels.jpg",
     gallery: ["/media/photo-block/photo-block-cluster.jpg", "/media/framed-matte/framed-trio-mono.jpg"],
     materials: ["wood"],

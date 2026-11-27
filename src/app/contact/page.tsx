@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactPanel } from "@/components/contact/contact-panel";
+import { StudioStatus } from "@/components/layout/studio-status";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -8,18 +9,15 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <header className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Contact</p>
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-          Speak with the studio.
-        </h1>
-        <p className="mt-5 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
-          For fastest routing, WhatsApp us with a photo of your wall and approximate dimensions.
+    <div className="shell pb-24 pt-10 lg:pb-32 lg:pt-16">
+      <header className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <h1 className="max-w-4xl text-display-xl text-balance">Speak with the studio.</h1>
+        <p className="inline-flex shrink-0 items-center rounded-full border border-bone/10 px-4 py-2.5 text-[13px] text-bone/70 lg:mb-3">
+          <StudioStatus showTime />
         </p>
       </header>
 
-      <div className="mt-12">
+      <div className="mt-14 lg:mt-20">
         <ContactPanel />
       </div>
     </div>

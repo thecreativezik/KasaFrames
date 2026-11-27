@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageIntro } from "@/components/layout/page-intro";
 import { Button } from "@/components/ui/button";
 import { isPaystackConfigured, verifyTransaction } from "@/lib/paystack";
 import { formatGhs, whatsappLink } from "@/lib/utils";
@@ -17,46 +18,43 @@ export default async function OrderPage({ params }: { params: Promise<{ referenc
   const paid = transaction?.status === "success";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-kasa-gold">Order</p>
-      <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
-        {paid ? "Payment received." : "We're confirming your payment."}
-      </h1>
+    <div className="shell pb-24 pt-16 lg:pb-36 lg:pt-24">
+      <PageIntro title={paid ? "Payment received." : "We're confirming your payment."} />
 
-      <div className="mt-8 rounded-[2rem] border border-kasa-black/10 bg-white/70 p-8 dark:border-white/10 dark:bg-white/5">
-        <dl className="grid gap-4 text-sm">
-          <div className="flex items-center justify-between gap-4">
-            <dt className="text-kasa-muted dark:text-kasa-sand/80">Reference</dt>
-            <dd className="font-mono text-xs">{reference}</dd>
+      <div className="mt-14 max-w-3xl rounded-panel border border-bone/10 bg-bone/[0.03] p-6 sm:p-10">
+        <dl className="-mx-6 -mt-6 grid border-b border-bone/10 text-[15px] sm:-mx-10 sm:-mt-10">
+          <div className="flex items-baseline justify-between gap-4 border-b border-bone/10 px-6 py-4 last:border-b-0 sm:px-10">
+            <dt className="text-bone/60">Reference</dt>
+            <dd className="min-w-0 text-right font-mono text-[13px] text-bone [overflow-wrap:anywhere]">{reference}</dd>
           </div>
           {transaction ? (
             <>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-kasa-muted dark:text-kasa-sand/80">Amount</dt>
-                <dd className="font-semibold">{formatGhs(transaction.amountGhs)}</dd>
+              <div className="flex items-baseline justify-between gap-4 border-b border-bone/10 px-6 py-4 last:border-b-0 sm:px-10">
+                <dt className="text-bone/60">Amount</dt>
+                <dd className="tabular-nums text-bone">{formatGhs(transaction.amountGhs)}</dd>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-kasa-muted dark:text-kasa-sand/80">Status</dt>
-                <dd className="font-semibold capitalize">{transaction.status}</dd>
+              <div className="flex items-baseline justify-between gap-4 border-b border-bone/10 px-6 py-4 last:border-b-0 sm:px-10">
+                <dt className="text-bone/60">Status</dt>
+                <dd className="capitalize text-bone">{transaction.status}</dd>
               </div>
               {transaction.channel ? (
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-kasa-muted dark:text-kasa-sand/80">Paid with</dt>
-                  <dd className="capitalize">{transaction.channel.replace(/_/g, " ")}</dd>
+                <div className="flex items-baseline justify-between gap-4 border-b border-bone/10 px-6 py-4 last:border-b-0 sm:px-10">
+                  <dt className="text-bone/60">Paid with</dt>
+                  <dd className="capitalize text-bone">{transaction.channel.replace(/_/g, " ")}</dd>
                 </div>
               ) : null}
             </>
           ) : null}
         </dl>
 
-        <p className="mt-6 text-sm leading-relaxed text-kasa-muted dark:text-kasa-sand/80">
+        <p className="mt-8 max-w-[62ch] text-[15px] leading-relaxed text-bone/60 text-pretty">
           {paid
             ? "Your pieces are queued for framing. The studio will confirm dimensions and installation timing over WhatsApp within 48 hours."
             : "If you completed payment, this page can lag behind the bank by a minute or two—your receipt from Paystack is the record. Send us the reference above and we'll confirm."}
         </p>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <Button asChild variant="secondary">
+          <Button asChild size="lg">
             <a
               href={whatsappLink(`Hello KasaFrames — checking on order ${reference}.`)}
               target="_blank"
@@ -65,7 +63,7 @@ export default async function OrderPage({ params }: { params: Promise<{ referenc
               WhatsApp the studio
             </a>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild size="lg" variant="secondary">
             <Link href="/collections">Continue browsing</Link>
           </Button>
         </div>
