@@ -28,7 +28,7 @@ export function SelectedWork({ items }: { items: GalleryItem[] }) {
       />
 
       <ul className="group/list mt-14 border-t border-bone/10 lg:mt-20">
-        {groups.map(({ meta, pieces }, i) => (
+        {groups.map(({ meta, pieces }) => (
           <li
             key={meta.key}
             className="border-b border-bone/10 transition-opacity duration-300 lg:group-hover/list:opacity-40 lg:hover:!opacity-100"
@@ -37,21 +37,16 @@ export function SelectedWork({ items }: { items: GalleryItem[] }) {
               href={`/gallery?finish=${meta.key}`}
               className="group grid items-center gap-x-8 gap-y-5 py-7 sm:grid-cols-[1fr_auto] lg:py-9"
             >
-              <div className="flex min-w-0 items-start gap-3 sm:gap-5">
-                <span className="shrink-0 pt-2 text-[11px] tabular-nums text-bone/50 lg:pt-5">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="min-w-0">
-                  <h3 className="text-[clamp(2.5rem,7.6vw,7.5rem)] leading-[0.95] tracking-[-0.04em] transition-transform duration-500 ease-out group-hover:translate-x-2">
-                    {meta.label}
-                  </h3>
-                  <p className="mt-3 text-[15px] text-bone/60">
-                    {meta.tagline} · {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
-                  </p>
-                </div>
+              <div className="min-w-0">
+                <h3 className="text-[clamp(2.5rem,7.6vw,7.5rem)] leading-[0.95] tracking-[-0.04em] transition-transform duration-500 ease-out group-hover:translate-x-2">
+                  {meta.label}
+                </h3>
+                <p className="mt-3 text-[15px] text-bone/60">
+                  {meta.tagline} · {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
+                </p>
               </div>
 
-              <div className="flex gap-2 pl-7 sm:pl-0">
+              <div className="flex gap-2">
                 {pieces.slice(0, 3).map((p, j) => (
                   <div
                     key={p.id}

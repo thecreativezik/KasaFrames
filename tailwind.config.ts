@@ -67,14 +67,9 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(-50%)" },
-        },
       },
       animation: {
         shimmer: "shimmer 1.8s infinite",
-        marquee: "marquee 60s linear infinite",
       },
     },
   },

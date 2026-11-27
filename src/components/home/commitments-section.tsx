@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { commitments } from "@/lib/data/site";
-import { SectionHeading } from "@/components/layout/page-intro";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 
@@ -10,30 +9,29 @@ import { Button } from "@/components/ui/button";
  */
 export function CommitmentsSection() {
   return (
-    <section className="shell py-24 lg:py-36">
-      <SectionHeading
-        title="No surprises at the door."
-        action={
-          <Button asChild variant="link" className="text-[15px]">
-            <Link href="/policies">Read how we work, in full</Link>
-          </Button>
-        }
-      />
-      <p className="mt-6 max-w-2xl text-lead font-light text-bone/60 text-pretty">
-        What you pay, when you pay it, and who turns up. All of it is on the site before you commit to anything.
-      </p>
+    <section aria-labelledby="commitments-title" className="shell grid gap-12 py-24 lg:grid-cols-12 lg:gap-10 lg:py-36">
+      <div className="lg:col-span-5">
+        <h2 id="commitments-title" className="text-display-md text-balance">
+          No surprises at the door.
+        </h2>
+        <p className="mt-6 max-w-md text-lead font-light text-bone/60 text-pretty">
+          What you pay, when you pay it, and who turns up. All of it is on the site before you commit to anything.
+        </p>
+        <Button asChild variant="link" className="mt-8 text-[15px]">
+          <Link href="/policies">Read how we work, in full</Link>
+        </Button>
+      </div>
 
-      <ol className="mt-14 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-20 lg:grid-cols-4">
+      <ul className="grid border-b border-bone/10 sm:grid-cols-2 sm:gap-x-10 lg:col-span-7">
         {commitments.map((c, i) => (
-          <li key={c.title} className="border-t border-bone/15 pt-6">
-            <Reveal delay={i * 0.06}>
-              <span className="text-[11px] tabular-nums text-bone/50">{String(i + 1).padStart(2, "0")}</span>
-              <h3 className="mt-6 text-title">{c.title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-bone/60 text-pretty">{c.body}</p>
+          <li key={c.title} className="border-t border-bone/10 py-8 lg:py-10">
+            <Reveal delay={(i % 2) * 0.06}>
+              <h3 className="text-title text-balance">{c.title}</h3>
+              <p className="mt-3 max-w-md text-[15px] leading-relaxed text-bone/60 text-pretty">{c.body}</p>
             </Reveal>
           </li>
         ))}
-      </ol>
+      </ul>
     </section>
   );
 }

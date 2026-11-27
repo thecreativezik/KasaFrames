@@ -1,28 +1,26 @@
 import { HomeHero } from "@/components/home/home-hero";
-import { WorkMarquee } from "@/components/home/work-marquee";
-import { ServicesSection } from "@/components/home/services-section";
 import { StatementSection } from "@/components/home/statement-section";
-import { SelectedWork } from "@/components/home/selected-work";
+import { WallStory } from "@/components/home/wall-story";
 import { CollectionsPreview } from "@/components/home/collections-preview";
-import { VisualizerPromo } from "@/components/home/visualizer-promo";
+import { SelectedWork } from "@/components/home/selected-work";
 import { CommitmentsSection } from "@/components/home/commitments-section";
 import { FaqSection } from "@/components/home/faq-section";
 import { ContactForm } from "@/components/contact/contact-form";
 import { loadGalleryItems } from "@/lib/data/media";
+import { planHang } from "@/lib/home-hang";
 
 export default function HomePage() {
   // Read at build time from public/media/, like the gallery page.
   const items = loadGalleryItems();
+  const hang = planHang(items, 90);
 
   return (
     <>
-      <HomeHero />
-      <WorkMarquee items={items} />
-      <ServicesSection />
+      <HomeHero hang={hang} />
       <StatementSection />
-      <SelectedWork items={items} />
+      <WallStory />
       <CollectionsPreview />
-      <VisualizerPromo />
+      <SelectedWork items={items} />
       <CommitmentsSection />
       <FaqSection />
 

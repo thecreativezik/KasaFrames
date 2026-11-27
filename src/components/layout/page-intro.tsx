@@ -25,15 +25,20 @@ export function PageIntro({
 export function SectionHeading({
   title,
   action,
+  id,
   className,
 }: {
   title: React.ReactNode;
   action?: React.ReactNode;
+  /** For a section that names itself with aria-labelledby. */
+  id?: string;
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between", className)}>
-      <h2 className="max-w-4xl text-display-md text-balance">{title}</h2>
+      <h2 id={id} className="max-w-4xl text-display-md text-balance">
+        {title}
+      </h2>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );

@@ -38,6 +38,7 @@ import {
   type Quad,
 } from "@/lib/perspective";
 import { cn, formatGhs } from "@/lib/utils";
+import { takeHandedOverWall } from "@/lib/wall-handoff";
 import {
   CM_PER_INCH,
   costOf,
@@ -48,11 +49,13 @@ import {
   pieceCm,
   yPctForHang,
   saveComposition,
+  SAMPLE_ROOMS,
   SCALE_REFERENCES,
   STYLES,
   STYLE_PRODUCT,
   type FrameStyle,
   type Piece,
+  type SampleRoom,
 } from "@/lib/visualizer";
 
 /** The three faces of the inspector: choosing frames, editing one, setting up the wall. */
@@ -65,81 +68,6 @@ const PRESETS: { key: Preset; label: string }[] = [
   { key: "triptych", label: "Triptych" },
   { key: "grid", label: "2 × 3 grid" },
   { key: "stair", label: "Staircase" },
-];
-
-interface SampleRoom {
-  id: string;
-  label: string;
-  src: string;
-  /** Width of the marked wall in cm, measured off the furniture—never guessed. */
-  wallCm: number;
-  /**
-   * Height of the same wall. The corners imply it, but stating it stops the
-   * first render using a height carried over from the room before this one.
-   */
-  wallHeightCm: number;
-  /**
-   * The wall in the photo, bottom edge on the skirting. Everything is hung
-   * against this, so a piece's height above the floor is a real number.
-   */
-  quad: Quad;
-  /** What we put the tape to, shown to the customer so the scale is checkable. */
-  measuredAgainst: string;
-}
-
-/**
- * The sample rooms, each one calibrated rather than estimated.
- *
- * A frame is drawn at cm per pixel, so the whole illusion rests on how wide the
- * wall really is. These three were measured against furniture of known size—a
- * sofa, a sideboard—which is why a 20 × 30 in print lands at the size it would
- * actually be in the room instead of a third too big.
- */
-const SAMPLE_ROOMS: SampleRoom[] = [
-  {
-    id: "lilac-lounge",
-    label: "Lilac corner",
-    src: "/media/rooms/lilac-lounge.jpg",
-    wallCm: 310,
-    wallHeightCm: 554,
-    // A real corner, so the wall recedes: the right-hand edge is the corner
-    // itself, traced along the cornice above and the skirting below.
-    quad: [
-      { x: 0, y: 0 },
-      { x: 0.657, y: 0.169 },
-      { x: 0.657, y: 0.817 },
-      { x: 0, y: 0.851 },
-    ],
-    measuredAgainst: "the 200 cm sofa against it",
-  },
-  {
-    id: "loft-sofa",
-    label: "Loft lounge",
-    src: "/media/rooms/loft-sofa.jpg",
-    wallCm: 595,
-    wallHeightCm: 319,
-    quad: [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 1, y: 0.951 },
-      { x: 0, y: 0.951 },
-    ],
-    measuredAgainst: "the 230 cm sofa in front of it",
-  },
-  {
-    id: "warm-sideboard",
-    label: "Warm sideboard",
-    src: "/media/rooms/warm-sideboard.jpg",
-    wallCm: 403,
-    wallHeightCm: 216,
-    quad: [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 1, y: 0.951 },
-      { x: 0, y: 0.951 },
-    ],
-    measuredAgainst: "the 155 cm sideboard below it",
-  },
 ];
 
 let counter = 1;
@@ -181,6 +109,18 @@ export function WallVisualizer() {
   const measureRef = React.useRef<"a" | "b" | null>(null);
   const artRef = React.useRef<{ id: string; x: number; y: number; artX: number; artY: number } | null>(null);
   const pendingDetect = React.useRef(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  // onRoomFile only calls setters, so the first render's copy stays correct.
+  const arriveWith = React.useRef(onRoomFile);
+
+  // A photo handed over from the home page becomes the wall straight away,
+  // and the page moves down to the studio so the visitor sees it land.
+  React.useEffect(() => {
+    const file = takeHandedOverWall();
+    if (!file) return;
+    void arriveWith.current(file);
+    requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: "start" }));
+  }, []);
 
   // Letting go of a piece puts the inspector back on choosing frames.
   React.useEffect(() => {
@@ -683,7 +623,7 @@ export function WallVisualizer() {
   ];
 
   return (
-    <div>
+    <div ref={rootRef} className="scroll-mt-24 lg:scroll-mt-28">
       {/* The studio. On a phone it is one column with the wall stuck under the
           header; from lg the inspector sits to the right of the wall. The wall
           is a direct child here so it can stay put while everything below it
